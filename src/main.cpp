@@ -1,4 +1,5 @@
 #include "DAWApplication.h"
+#include "DAWGUI.h"
 #include <iostream>
 
 int main(int argc, char* argv[]) {
@@ -19,15 +20,31 @@ int main(int argc, char* argv[]) {
     // Create a new project
     daw.newProject("Untitled Project");
     
+    // Initialize GUI
+    OmegaDAW::DAWGUI gui(&daw);
+    if (!gui.initialize(1280, 800)) {
+        std::cerr << "Failed to initialize GUI" << std::endl;
+        return 1;
+    }
+    
     std::cout << std::endl;
     std::cout << "DAW is ready!" << std::endl;
-    std::cout << "Press ESC to exit..." << std::endl;
+    std::cout << "Controls:" << std::endl;
+    std::cout << "  SPACE - Play/Stop" << std::endl;
+    std::cout << "  R - Record" << std::endl;
+    std::cout << "  ESC - Exit" << std::endl;
     std::cout << std::endl;
     
-    // Run the main application loop
-    daw.run();
+    // Main GUI loop
+    while (!gui.shouldQuit()) {
+        gui.processEvents();
+        daw.processAudio();
+        gui.render();
+    }
     
-    // Cleanup is handled by destructor
+    // Cleanup
+    gui.shutdown();
+    // daw cleanup handled by destructor
     
     return 0;
 }
