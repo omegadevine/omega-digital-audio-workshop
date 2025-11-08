@@ -11,7 +11,7 @@
 // Forward declare PortAudio stream
 typedef void PaStream;
 
-namespace omega {
+namespace OmegaDAW {
 
 // Audio processor interface
 class IAudioProcessor {
@@ -30,6 +30,38 @@ struct AudioDeviceInfo {
     double defaultSampleRate;
 };
 
+// Resampler for handling different sample rates
+class Resampler {
+public:
+    Resampler();
+    ~Resampler();
+    void initialize(int inputSampleRate, int outputSampleRate, int numChannels);
+    void process(const float* input, float* output, int inputFrames, int& outputFrames);
+    int getOutputFrameCount(int inputFrames) const;
+private:
+    int inputSampleRate_;
+    int outputSampleRate_;
+    int numChannels_;
+    double ratio_;
+    std::vector<float> leftover_;
+};
+
+// Recording buffer
+class RecordingBuffer {
+public:
+    RecordingBuffer(int sampleRate, int numChannels);
+    void clear();
+    void appendSamples(const float* samples, int numFrames);
+    const std::vector<float>& getData() const { return data_; }
+    int getNumFrames() const { return numFrames_; }
+    bool saveToWav(const std::string& filename);
+private:
+    int sampleRate_;
+    int numChannels_;
+    int numFrames_;
+    std::vector<float> data_;
+};
+
 class AudioEngine {
 public:
     AudioEngine();
@@ -38,15 +70,24 @@ public:
     // Device management
     std::vector<AudioDeviceInfo> getAvailableDevices();
     bool selectDevice(int deviceIndex);
+    bool selectInputDevice(int deviceIndex);
     
     // Initialization
     bool initialize(int sampleRate = 48000, int bufferSize = 256, int numChannels = 2);
+    bool initializeWithInput(int sampleRate = 48000, int bufferSize = 256, 
+                            int numOutputChannels = 2, int numInputChannels = 2);
     void shutdown();
     
     // Transport control
     void startPlayback();
     void stopPlayback();
     void pausePlayback();
+    
+    // Recording control
+    void startRecording();
+    void stopRecording();
+    bool isRecording() const { return isRecording_.load(); }
+    std::shared_ptr<RecordingBuffer> getRecordingBuffer() const { return recordingBuffer_; }
     
     // State queries
     bool isPlaying() const { return isPlaying_.load(); }
@@ -75,6 +116,16 @@ public:
     double getInputLatency() const { return inputLatency_; }
     double getOutputLatency() const { return outputLatency_; }
     
+    // Advanced features
+    void setMonitoringEnabled(bool enabled) { monitoringEnabled_ = enabled; }
+    bool isMonitoringEnabled() const { return monitoringEnabled_; }
+    void setInputGain(float gain) { inputGain_ = std::max(0.0f, std::min(10.0f, gain)); }
+    float getInputGain() const { return inputGain_; }
+    
+    // Overdub mode - mix recording with playback
+    void setOverdubMode(bool enabled) { overdubMode_ = enabled; }
+    bool isOverdubMode() const { return overdubMode_; }
+    
 private:
     // Audio callback (static for C API)
     static int paCallback(const void* inputBuffer, void* outputBuffer,
@@ -93,11 +144,14 @@ private:
     PaStream* stream_;
     bool initialized_;
     int selectedDeviceIndex_;
+    int selectedInputDeviceIndex_;
+    bool hasInput_;
     
     // Audio configuration
     int sampleRate_;
     int bufferSize_;
     int numChannels_;
+    int numInputChannels_;
     
     // Transport state
     std::atomic<bool> isPlaying_;
@@ -122,8 +176,17 @@ private:
     
     // Internal buffers for processing
     std::vector<std::vector<float>> internalBuffers_;
+    std::vector<std::vector<float>> inputBuffers_;
+    
+    // Recording
+    std::atomic<bool> isRecording_;
+    std::shared_ptr<RecordingBuffer> recordingBuffer_;
+    std::mutex recordingMutex_;
+    bool monitoringEnabled_;
+    float inputGain_;
+    bool overdubMode_;
 };
 
-} // namespace omega
+} // namespace OmegaDAW
 
 #endif // OMEGA_DAW_AUDIO_ENGINE_H
