@@ -5,7 +5,7 @@
 #include <cstdint>
 #include <cstring>
 
-namespace omega {
+namespace OmegaDAW {
 
 class AudioBuffer {
 public:
@@ -17,6 +17,8 @@ public:
     
     float* getChannelData(int channel);
     const float* getChannelData(int channel) const;
+    float* getWritePointer(int channel) { return getChannelData(channel); }
+    const float* getReadPointer(int channel) const { return getChannelData(channel); }
     
     int getNumChannels() const { return numChannels_; }
     int getNumSamples() const { return numSamples_; }
@@ -36,6 +38,6 @@ private:
     std::vector<std::vector<float>> channelData_;
 };
 
-} // namespace omega
+} // namespace OmegaDAW
 
 #endif // OMEGA_DAW_AUDIO_BUFFER_H

@@ -2,7 +2,7 @@
 #include <random>
 #include <algorithm>
 
-namespace omega {
+namespace OmegaDAW {
 
 static std::random_device rd;
 static std::mt19937 gen(rd());
@@ -70,4 +70,4 @@ float Oscillator::generateSample() {
     }
 }
 
-} // namespace omega
+} // namespace OmegaDAW

@@ -4,7 +4,7 @@
 namespace OmegaDAW {
 
 DAWGUI::DAWGUI(DAWApplication* app)
-    : daw(app), window(nullptr), renderer(nullptr), 
+    : daw(app), window(nullptr), renderer(nullptr), font(nullptr),
       quit(false), windowWidth(0), windowHeight(0),
       mouseX(0), mouseY(0) {
 }
@@ -20,6 +20,12 @@ bool DAWGUI::initialize(int width, int height) {
     // Initialize SDL
     if (SDL_Init(SDL_INIT_VIDEO) < 0) {
         std::cerr << "Failed to initialize SDL: " << SDL_GetError() << std::endl;
+        return false;
+    }
+    
+    // Initialize SDL_ttf
+    if (TTF_Init() < 0) {
+        std::cerr << "Failed to initialize SDL_ttf: " << TTF_GetError() << std::endl;
         return false;
     }
     
@@ -44,11 +50,47 @@ bool DAWGUI::initialize(int width, int height) {
         return false;
     }
     
+    // Load font (try multiple locations)
+    const char* fontPaths[] = {
+        "C:/Windows/Fonts/arial.ttf",
+        "C:/Windows/Fonts/consola.ttf",
+        "C:/Windows/Fonts/segoeui.ttf",
+        nullptr
+    };
+    
+    for (int i = 0; fontPaths[i] != nullptr; ++i) {
+        font = TTF_OpenFont(fontPaths[i], 14);
+        if (font) {
+            std::cout << "Loaded font: " << fontPaths[i] << std::endl;
+            break;
+        }
+    }
+    
+    if (!font) {
+        std::cerr << "Failed to load any font: " << TTF_GetError() << std::endl;
+        std::cerr << "Text will not be rendered properly." << std::endl;
+    }
+    
     // Setup transport buttons
-    playButton = {"Play", {20, windowHeight - 60, 80, 40}, false, false};
-    stopButton = {"Stop", {110, windowHeight - 60, 80, 40}, false, false};
-    recordButton = {"Rec", {200, windowHeight - 60, 80, 40}, false, false};
-    pauseButton = {"Pause", {290, windowHeight - 60, 80, 40}, false, false};
+    playButton.label = "Play";
+    playButton.rect = {20, windowHeight - 60, 80, 40};
+    playButton.hovered = false;
+    playButton.pressed = false;
+    
+    stopButton.label = "Stop";
+    stopButton.rect = {110, windowHeight - 60, 80, 40};
+    stopButton.hovered = false;
+    stopButton.pressed = false;
+    
+    recordButton.label = "Rec";
+    recordButton.rect = {200, windowHeight - 60, 80, 40};
+    recordButton.hovered = false;
+    recordButton.pressed = false;
+    
+    pauseButton.label = "Pause";
+    pauseButton.rect = {290, windowHeight - 60, 80, 40};
+    pauseButton.hovered = false;
+    pauseButton.pressed = false;
     
     // Setup channel faders and meters
     for (int i = 0; i < 8; ++i) {
@@ -68,6 +110,11 @@ bool DAWGUI::initialize(int width, int height) {
 }
 
 void DAWGUI::shutdown() {
+    if (font) {
+        TTF_CloseFont(font);
+        font = nullptr;
+    }
+    
     if (renderer) {
         SDL_DestroyRenderer(renderer);
         renderer = nullptr;
@@ -78,6 +125,7 @@ void DAWGUI::shutdown() {
         window = nullptr;
     }
     
+    TTF_Quit();
     SDL_Quit();
 }
 
@@ -303,12 +351,31 @@ void DAWGUI::drawMeter(const Meter& meter) {
 }
 
 void DAWGUI::drawText(const std::string& text, int x, int y, SDL_Color color) {
-    // Simple text rendering (in real app, use SDL_ttf)
-    // For now, just draw text background to show where it would be
-    SDL_Rect textRect = {x, y, (int)text.length() * 8, 14};
-    SDL_SetRenderDrawColor(renderer, color.r, color.g, color.b, color.a);
-    // Just draw the rect outline for now
-    SDL_RenderDrawRect(renderer, &textRect);
+    if (!font || text.empty()) {
+        // Fallback: draw a rectangle where text would be
+        SDL_Rect textRect = {x, y, (int)text.length() * 8, 14};
+        SDL_SetRenderDrawColor(renderer, color.r, color.g, color.b, color.a);
+        SDL_RenderDrawRect(renderer, &textRect);
+        return;
+    }
+    
+    // Render text with SDL_ttf
+    SDL_Surface* textSurface = TTF_RenderText_Blended(font, text.c_str(), color);
+    if (!textSurface) {
+        return;
+    }
+    
+    SDL_Texture* textTexture = SDL_CreateTextureFromSurface(renderer, textSurface);
+    if (!textTexture) {
+        SDL_FreeSurface(textSurface);
+        return;
+    }
+    
+    SDL_Rect destRect = {x, y, textSurface->w, textSurface->h};
+    SDL_RenderCopy(renderer, textTexture, nullptr, &destRect);
+    
+    SDL_DestroyTexture(textTexture);
+    SDL_FreeSurface(textSurface);
 }
 
 void DAWGUI::drawRect(const SDL_Rect& rect, SDL_Color color, bool filled) {
@@ -370,13 +437,24 @@ void DAWGUI::handleMouseMove(int x, int y) {
     pauseButton.hovered = isPointInRect(x, y, pauseButton.rect);
     
     // Update dragging faders
-    for (auto& fader : channelFaders) {
+    for (size_t i = 0; i < channelFaders.size(); ++i) {
+        auto& fader = channelFaders[i];
         if (fader.dragging) {
             fader.value = 1.0f - (float)(y - fader.rect.y) / fader.rect.h;
             fader.value = std::max(0.0f, std::min(1.0f, fader.value));
             
             // Apply to mixer if available
-            // TODO: Connect to actual mixer channels
+            if (daw && daw->getMixer()) {
+                auto mixer = daw->getMixer();
+                if (i < static_cast<size_t>(mixer->getNumChannels())) {
+                    auto channel = mixer->getChannel(static_cast<int>(i));
+                    if (channel) {
+                        // Convert 0-1 to -60 to +6 dB range
+                        float db = (fader.value * 66.0f) - 60.0f;
+                        channel->setVolume(db);
+                    }
+                }
+            }
         }
     }
 }

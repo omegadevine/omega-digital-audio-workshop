@@ -1,0 +1,106 @@
+cmake_minimum_required(VERSION 3.15)
+project(OmegaDAW VERSION 0.1.0 LANGUAGES CXX)
+
+# Set C++ standard
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_EXTENSIONS OFF)
+
+# Find SDL2
+find_package(SDL2 CONFIG REQUIRED)
+
+# Find PortAudio
+find_package(portaudio CONFIG REQUIRED)
+
+# Output directories
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
+set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
+set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
+
+# Options
+option(BUILD_TESTS "Build test suite" OFF)
+option(BUILD_EXAMPLES "Build example applications" OFF)
+
+# Include directories
+include_directories(
+    ${CMAKE_SOURCE_DIR}/include
+    ${CMAKE_SOURCE_DIR}/src
+)
+
+# Source files
+file(GLOB_RECURSE SOURCES 
+    "src/*.cpp"
+    "src/*.c"
+)
+
+file(GLOB_RECURSE HEADERS 
+    "include/*.h"
+    "include/*.hpp"
+)
+
+# Main executable
+add_executable(OmegaDAW 
+    ${SOURCES}
+    ${HEADERS}
+)
+
+# Link PortAudio and SDL2
+target_link_libraries(OmegaDAW 
+    PRIVATE 
+    portaudio
+    $<TARGET_NAME_IF_EXISTS:SDL2::SDL2main>
+    $<IF:$<TARGET_EXISTS:SDL2::SDL2>,SDL2::SDL2,SDL2::SDL2-static>
+)
+
+# Platform-specific settings
+if(WIN32)
+    target_compile_definitions(OmegaDAW PRIVATE OMEGA_PLATFORM_WINDOWS)
+    # Link Windows audio libraries
+    target_link_libraries(OmegaDAW 
+        PRIVATE
+        winmm
+        dsound
+        ole32
+        oleaut32
+    )
+elseif(UNIX AND NOT APPLE)
+    target_compile_definitions(OmegaDAW PRIVATE OMEGA_PLATFORM_LINUX)
+    target_link_libraries(OmegaDAW 
+        asound
+        pthread
+    )
+elseif(APPLE)
+    target_compile_definitions(OmegaDAW PRIVATE OMEGA_PLATFORM_MAC)
+    find_library(COREAUDIO_LIBRARY CoreAudio)
+    find_library(COREMIDI_LIBRARY CoreMIDI)
+    target_link_libraries(OmegaDAW 
+        ${COREAUDIO_LIBRARY}
+        ${COREMIDI_LIBRARY}
+    )
+endif()
+
+# Compiler warnings
+if(MSVC)
+    target_compile_options(OmegaDAW PRIVATE /W4)
+else()
+    target_compile_options(OmegaDAW PRIVATE -Wall -Wextra -pedantic)
+endif()
+
+# Installation rules
+install(TARGETS OmegaDAW DESTINATION bin)
+
+# Tests
+if(BUILD_TESTS)
+    enable_testing()
+    add_subdirectory(tests)
+endif()
+
+# Examples
+if(BUILD_EXAMPLES)
+    add_subdirectory(examples)
+endif()
+
+message(STATUS "Omega DAW Configuration:")
+message(STATUS "  Version: ${PROJECT_VERSION}")
+message(STATUS "  Build type: ${CMAKE_BUILD_TYPE}")
+message(STATUS "  C++ standard: ${CMAKE_CXX_STANDARD}")

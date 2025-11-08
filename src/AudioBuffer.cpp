@@ -2,7 +2,7 @@
 #include <algorithm>
 #include <stdexcept>
 
-namespace omega {
+namespace OmegaDAW {
 
 AudioBuffer::AudioBuffer(int numChannels, int numSamples)
     : numChannels_(numChannels)
@@ -95,4 +95,4 @@ void AudioBuffer::applyGainRamp(float startGain, float endGain) {
     }
 }
 
-} // namespace omega
+} // namespace OmegaDAW

@@ -4,7 +4,7 @@
 #include "AudioEngine.h"
 #include <vector>
 
-namespace omega {
+namespace OmegaDAW {
 
 enum class FilterType {
     LowPass,
@@ -60,6 +60,6 @@ private:
     bool coefficientsNeedUpdate_;
 };
 
-} // namespace omega
+} // namespace OmegaDAW
 
 #endif // OMEGA_DAW_FILTER_H

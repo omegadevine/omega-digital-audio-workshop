@@ -85,6 +85,14 @@ public:
     int getWidth() const { return width; }
     int getHeight() const { return height; }
     void setBackgroundColor(const Color& color) { backgroundColor = color; }
+    
+    // Integration methods
+    bool initialize(const std::string& title, int width, int height);
+    void beginFrame();
+    void endFrame();
+    void drawTransport(class Transport* transport);
+    void drawMixer(class Mixer* mixer);
+    void drawTimeline(class Arrangement* arrangement, double position);
 };
 
 }

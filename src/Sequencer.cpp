@@ -110,12 +110,19 @@ void Sequencer::processMIDIClips(double currentTime, double deltaTime) {
             
             float envelope = clip->getEnvelopeAtTime(currentTime);
             
-            for (auto& note : notes) {
-                if (note.type == MIDIMessageType::NoteOn) {
-                    uint8_t velocity = static_cast<uint8_t>(note.data2 * envelope);
-                    MIDIMessage adjustedNote = note;
-                    adjustedNote.data2 = velocity;
+            for (const auto& note : notes) {
+                if (note.isNoteOn()) {
+                    uint8_t velocity = static_cast<uint8_t>(
+                        std::min(127.0f, note.getVelocity() * envelope)
+                    );
+                    MIDIMessage adjustedNote(
+                        note.getStatus(),
+                        note.getData1(),
+                        velocity
+                    );
+                    adjustedNote.setTimestamp(note.getTimestamp());
                     // Send MIDI note to appropriate destination
+                    // Could be sent to audio engine or MIDI device
                 }
             }
         }
@@ -246,10 +253,11 @@ void Sequencer::recordMIDI(const MIDIMessage& message) {
     double clipRelativeTime = currentTime - m_recordingMIDIClip->getStartTime();
     
     MIDIMessage recordedMessage = message;
-    recordedMessage.timestamp = clipRelativeTime;
+    recordedMessage.setTimestamp(clipRelativeTime);
     
     if (m_quantization > 0.0) {
-        recordedMessage.timestamp = std::round(clipRelativeTime / m_quantization) * m_quantization;
+        double quantized = std::round(clipRelativeTime / m_quantization) * m_quantization;
+        recordedMessage.setTimestamp(quantized);
     }
     
     m_recordingMIDIClip->addNote(recordedMessage);

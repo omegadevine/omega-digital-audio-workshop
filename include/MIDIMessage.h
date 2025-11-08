@@ -4,7 +4,7 @@
 #include <cstdint>
 #include <vector>
 
-namespace omega {
+namespace OmegaDAW {
 
 enum class MIDIMessageType {
     NoteOff = 0x80,
@@ -42,6 +42,7 @@ public:
     uint8_t getStatus() const { return status_; }
     uint8_t getData1() const { return data1_; }
     uint8_t getData2() const { return data2_; }
+    uint8_t getType() const { return status_ & 0xF0; }  // Get message type
     
     double getTimestamp() const { return timestamp_; }
     void setTimestamp(double timestamp) { timestamp_ = timestamp; }
@@ -69,6 +70,6 @@ private:
     std::vector<MIDIMessage> messages_;
 };
 
-} // namespace omega
+} // namespace OmegaDAW
 
 #endif // OMEGA_DAW_MIDI_MESSAGE_H

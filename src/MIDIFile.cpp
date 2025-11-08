@@ -3,7 +3,16 @@
 #include <iostream>
 #include <cmath>
 
-namespace omega {
+#ifdef _WIN32
+#include <stdlib.h>
+#define BSWAP32(x) _byteswap_ulong(x)
+#define BSWAP16(x) _byteswap_ushort(x)
+#else
+#define BSWAP32(x) __builtin_bswap32(x)
+#define BSWAP16(x) __builtin_bswap16(x)
+#endif
+
+namespace OmegaDAW {
 
 MIDIFile::MIDIFile()
     : format_(MIDIFileFormat::MultiTrack)
@@ -36,6 +45,7 @@ void MIDIFile::addTrack(const MIDITrackData& track) {
     tracks_.push_back(track);
 }
 
+/*
 void MIDIFile::convertToClips(std::vector<std::shared_ptr<MIDIClip>>& clips) const {
     for (const auto& track : tracks_) {
         auto clip = std::make_shared<MIDIClip>();
@@ -103,6 +113,7 @@ void MIDIFile::loadFromClips(const std::vector<std::shared_ptr<MIDIClip>>& clips
         tracks_.push_back(track);
     }
 }
+*/
 
 double MIDIFile::ticksToSeconds(int ticks) const {
     double beatsPerSecond = tempo_ / 60.0;
@@ -136,23 +147,23 @@ bool MIDIFile::readMIDIFile(const std::string& filename) {
     // Read header length (should be 6)
     uint32_t headerLength = 0;
     file.read(reinterpret_cast<char*>(&headerLength), 4);
-    headerLength = __builtin_bswap32(headerLength);
+    headerLength = BSWAP32(headerLength);
     
     // Read format
     uint16_t formatType = 0;
     file.read(reinterpret_cast<char*>(&formatType), 2);
-    formatType = __builtin_bswap16(formatType);
+    formatType = BSWAP16(formatType);
     format_ = static_cast<MIDIFileFormat>(formatType);
     
     // Read number of tracks
     uint16_t numTracks = 0;
     file.read(reinterpret_cast<char*>(&numTracks), 2);
-    numTracks = __builtin_bswap16(numTracks);
+    numTracks = BSWAP16(numTracks);
     
     // Read ticks per quarter note
     uint16_t division = 0;
     file.read(reinterpret_cast<char*>(&division), 2);
-    division = __builtin_bswap16(division);
+    division = BSWAP16(division);
     ticksPerQuarterNote_ = division;
     
     std::cout << "MIDI file loaded: Format " << static_cast<int>(format_) 
@@ -176,16 +187,16 @@ bool MIDIFile::writeMIDIFile(const std::string& filename) {
     // Write MIDI header
     file.write("MThd", 4);
     
-    uint32_t headerLength = __builtin_bswap32(6);
+    uint32_t headerLength = BSWAP32(6);
     file.write(reinterpret_cast<const char*>(&headerLength), 4);
     
-    uint16_t formatType = __builtin_bswap16(static_cast<uint16_t>(format_));
+    uint16_t formatType = BSWAP16(static_cast<uint16_t>(format_));
     file.write(reinterpret_cast<const char*>(&formatType), 2);
     
-    uint16_t numTracks = __builtin_bswap16(static_cast<uint16_t>(tracks_.size()));
+    uint16_t numTracks = BSWAP16(static_cast<uint16_t>(tracks_.size()));
     file.write(reinterpret_cast<const char*>(&numTracks), 2);
     
-    uint16_t division = __builtin_bswap16(static_cast<uint16_t>(ticksPerQuarterNote_));
+    uint16_t division = BSWAP16(static_cast<uint16_t>(ticksPerQuarterNote_));
     file.write(reinterpret_cast<const char*>(&division), 2);
     
     // Note: Full track writing would be implemented here
@@ -228,4 +239,4 @@ void MIDIFile::writeVariableLength(std::ofstream& file, uint32_t value) {
     }
 }
 
-} // namespace omega
+} // namespace OmegaDAW

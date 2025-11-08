@@ -5,7 +5,7 @@
 #include <memory>
 #include <vector>
 
-namespace omega {
+namespace OmegaDAW {
 
 class Effect {
 public:
@@ -42,6 +42,6 @@ private:
     float postGain_;
 };
 
-} // namespace omega
+} // namespace OmegaDAW
 
 #endif // OMEGA_DAW_MIXER_CHANNEL_H

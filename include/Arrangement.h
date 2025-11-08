@@ -42,6 +42,15 @@ public:
     
     void clear();
     
+    // Integration methods
+    void initialize();
+    void start();
+    void stop();
+    void shutdown();
+    AudioBuffer renderAtPosition(double position);
+    void loadFromProject(class Project* project);
+    std::string serialize() const;
+    
     struct Marker {
         double time;
         std::string name;

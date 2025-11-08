@@ -7,7 +7,7 @@
 #include <map>
 #include <set>
 
-namespace omega {
+namespace OmegaDAW {
 
 struct Connection {
     int sourceId;
@@ -154,6 +154,6 @@ public:
     void reset() override;
 };
 
-} // namespace omega
+} // namespace OmegaDAW
 
 #endif // OMEGA_DAW_ROUTER_H

@@ -1,7 +1,7 @@
 #include "Transport.h"
 #include <algorithm>
 
-namespace omega {
+namespace OmegaDAW {
 
 Transport::Transport()
     : playing_(false)
@@ -117,4 +117,25 @@ int64_t Transport::beatsToSamples(double beats) const {
     return static_cast<int64_t>(beats * samplesPerBeat);
 }
 
-} // namespace omega
+void Transport::initialize() {
+    // Initialize transport
+}
+
+void Transport::shutdown() {
+    // Shutdown transport
+    stop();
+}
+
+void Transport::reset() {
+    positionInBeats_ = 0.0;
+    positionInSamples_ = 0;
+    playing_ = false;
+    recording_ = false;
+    paused_ = false;
+}
+
+void Transport::advance() {
+    advance(512); // Default advance by 512 samples
+}
+
+} // namespace OmegaDAW

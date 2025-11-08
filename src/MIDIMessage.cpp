@@ -1,7 +1,7 @@
 #include "MIDIMessage.h"
 #include <algorithm>
 
-namespace omega {
+namespace OmegaDAW {
 
 MIDIMessage::MIDIMessage()
     : status_(0)
@@ -110,4 +110,4 @@ void MIDIBuffer::sortByTimestamp() {
         });
 }
 
-} // namespace omega
+} // namespace OmegaDAW

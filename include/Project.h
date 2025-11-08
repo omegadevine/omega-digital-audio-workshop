@@ -7,7 +7,7 @@
 #include <vector>
 #include <memory>
 
-namespace omega {
+namespace OmegaDAW {
 
 class Project {
 public:
@@ -39,8 +39,17 @@ public:
     
     void setBufferSize(int bufferSize);
     int getBufferSize() const { return bufferSize_; }
+    
+    // Integration methods
+    void clear();
+    void setArrangementData(const std::string& data);
+    void setMixerData(const std::string& data);
+    const std::string& getArrangementData() const { return arrangementData_; }
+    const std::string& getMixerData() const { return mixerData_; }
 
 private:
+    std::string arrangementData_;
+    std::string mixerData_;
     std::string name_;
     std::string filepath_;
     bool modified_;
@@ -52,6 +61,6 @@ private:
     int bufferSize_;
 };
 
-} // namespace omega
+} // namespace OmegaDAW
 
 #endif // OMEGA_DAW_PROJECT_H

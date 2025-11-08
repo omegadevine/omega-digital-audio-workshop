@@ -1,7 +1,7 @@
 #include "MIDIDevice.h"
 #include <iostream>
 
-namespace omega {
+namespace OmegaDAW {
 
 // MIDIInputDevice Implementation
 MIDIInputDevice::MIDIInputDevice(const std::string& name, int deviceId)
@@ -174,4 +174,4 @@ void MIDIDeviceManager::closeAllDevices() {
     openOutputs_.clear();
 }
 
-} // namespace omega
+} // namespace OmegaDAW

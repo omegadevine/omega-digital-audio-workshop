@@ -1,17 +1,20 @@
 #include "AudioEngine.h"
+
+#ifdef _WIN32
+#define NOMINMAX
+#define WIN32_LEAN_AND_MEAN
+#include <windows.h>
+#else
+#include <pthread.h>
+#include <sched.h>
+#endif
+
 #include <portaudio.h>
 #include <iostream>
 #include <cmath>
 #include <algorithm>
 #include <cstring>
 #include <fstream>
-
-#ifdef _WIN32
-#include <windows.h>
-#else
-#include <pthread.h>
-#include <sched.h>
-#endif
 
 namespace OmegaDAW {
 
@@ -546,7 +549,7 @@ float AudioEngine::getRMSLevel(int channel) const {
 
 int AudioEngine::paCallback(const void* inputBuffer, void* outputBuffer,
                            unsigned long framesPerBuffer,
-                           const PaStreamCallbackTimeInfo* timeInfo,
+                           const ::PaStreamCallbackTimeInfo* timeInfo,
                            unsigned long statusFlags, void* userData) {
     
     AudioEngine* engine = static_cast<AudioEngine*>(userData);

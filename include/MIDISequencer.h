@@ -6,7 +6,7 @@
 #include <memory>
 #include <functional>
 
-namespace omega {
+namespace OmegaDAW {
 
 struct MIDINote {
     int channel;
@@ -19,9 +19,9 @@ struct MIDINote {
         : channel(ch), noteNumber(note), velocity(vel), startTime(start), duration(dur) {}
 };
 
-class MIDIClip {
+class MIDIPattern {
 public:
-    MIDIClip();
+    MIDIPattern();
     
     void addNote(const MIDINote& note);
     void removeNote(int index);
@@ -52,7 +52,7 @@ class MIDISequencer {
 public:
     MIDISequencer();
     
-    void addClip(std::shared_ptr<MIDIClip> clip, double startTime);
+    void addClip(std::shared_ptr<MIDIPattern> clip, double startTime);
     void removeClip(int index);
     void clearClips();
     
@@ -72,11 +72,11 @@ public:
     bool isRecording() const { return isRecording_; }
     
     void recordMessage(const MIDIMessage& message);
-    std::shared_ptr<MIDIClip> stopRecording();
+    std::shared_ptr<MIDIPattern> stopRecording();
     
 private:
     struct ClipInstance {
-        std::shared_ptr<MIDIClip> clip;
+        std::shared_ptr<MIDIPattern> clip;
         double startTime;
     };
     
@@ -85,10 +85,10 @@ private:
     int timeSignatureNum_;
     int timeSignatureDenom_;
     bool isRecording_;
-    std::shared_ptr<MIDIClip> recordingClip_;
+    std::shared_ptr<MIDIPattern> recordingClip_;
     double recordStartTime_;
 };
 
-} // namespace omega
+} // namespace OmegaDAW
 
 #endif // OMEGA_DAW_MIDI_SEQUENCER_H

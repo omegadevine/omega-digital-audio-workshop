@@ -8,8 +8,8 @@
 #include <mutex>
 #include <atomic>
 
-// Forward declare PortAudio stream
-typedef void PaStream;
+// Include PortAudio for types
+#include <portaudio.h>
 
 namespace OmegaDAW {
 
@@ -148,7 +148,7 @@ private:
     // Audio callback (static for C API)
     static int paCallback(const void* inputBuffer, void* outputBuffer,
                          unsigned long framesPerBuffer,
-                         const struct PaStreamCallbackTimeInfo* timeInfo,
+                         const struct ::PaStreamCallbackTimeInfo* timeInfo,
                          unsigned long statusFlags, void* userData);
     
     // Instance audio processing

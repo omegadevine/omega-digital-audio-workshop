@@ -2,29 +2,29 @@
 #include <algorithm>
 #include <cmath>
 
-namespace omega {
+namespace OmegaDAW {
 
-// MIDIClip Implementation
-MIDIClip::MIDIClip()
+// MIDIPattern Implementation
+MIDIPattern::MIDIPattern()
     : length_(4.0)
     , looping_(false) {
 }
 
-void MIDIClip::addNote(const MIDINote& note) {
+void MIDIPattern::addNote(const MIDINote& note) {
     notes_.push_back(note);
 }
 
-void MIDIClip::removeNote(int index) {
+void MIDIPattern::removeNote(int index) {
     if (index >= 0 && index < static_cast<int>(notes_.size())) {
         notes_.erase(notes_.begin() + index);
     }
 }
 
-void MIDIClip::clearNotes() {
+void MIDIPattern::clearNotes() {
     notes_.clear();
 }
 
-void MIDIClip::getMessagesInRange(double startTime, double endTime, MIDIBuffer& buffer) const {
+void MIDIPattern::getMessagesInRange(double startTime, double endTime, MIDIBuffer& buffer) const {
     for (const auto& note : notes_) {
         if (note.startTime >= startTime && note.startTime < endTime) {
             MIDIMessage noteOn = MIDIMessage::noteOn(note.channel, note.noteNumber, note.velocity);
@@ -41,7 +41,7 @@ void MIDIClip::getMessagesInRange(double startTime, double endTime, MIDIBuffer& 
     }
 }
 
-void MIDIClip::quantize(double gridSize) {
+void MIDIPattern::quantize(double gridSize) {
     for (auto& note : notes_) {
         note.startTime = std::round(note.startTime / gridSize) * gridSize;
         note.duration = std::round(note.duration / gridSize) * gridSize;
@@ -51,7 +51,7 @@ void MIDIClip::quantize(double gridSize) {
     }
 }
 
-void MIDIClip::transpose(int semitones) {
+void MIDIPattern::transpose(int semitones) {
     for (auto& note : notes_) {
         int newNote = note.noteNumber + semitones;
         if (newNote >= 0 && newNote <= 127) {
@@ -69,7 +69,7 @@ MIDISequencer::MIDISequencer()
     , recordStartTime_(0.0) {
 }
 
-void MIDISequencer::addClip(std::shared_ptr<MIDIClip> clip, double startTime) {
+void MIDISequencer::addClip(std::shared_ptr<MIDIPattern> clip, double startTime) {
     clips_.push_back({clip, startTime});
 }
 
@@ -190,11 +190,11 @@ void MIDISequencer::recordMessage(const MIDIMessage& message) {
     }
 }
 
-std::shared_ptr<MIDIClip> MIDISequencer::stopRecording() {
+std::shared_ptr<MIDIPattern> MIDISequencer::stopRecording() {
     isRecording_ = false;
     auto clip = recordingClip_;
     recordingClip_ = nullptr;
     return clip;
 }
 
-} // namespace omega
+} // namespace OmegaDAW

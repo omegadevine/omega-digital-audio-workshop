@@ -2,7 +2,7 @@
 #include <cmath>
 #include <algorithm>
 
-namespace omega {
+namespace OmegaDAW {
 
 BiquadFilter::BiquadFilter(FilterType type)
     : type_(type)
@@ -160,4 +160,4 @@ float BiquadFilter::processSample(float input, int channel) {
     return output;
 }
 
-} // namespace omega
+} // namespace OmegaDAW

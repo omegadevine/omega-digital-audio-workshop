@@ -6,103 +6,119 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
+# Find SDL2
+find_package(SDL2 CONFIG REQUIRED)
+find_package(SDL2_ttf CONFIG REQUIRED)
+
 # Find PortAudio
-find_package(PkgConfig)
-if(PkgConfig_FOUND)
-    pkg_check_modules(PORTAUDIO portaudio-2.0)
-endif()
+find_package(portaudio CONFIG REQUIRED)
 
 # Output directories
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
 
-# Options
-option(BUILD_TESTS "Build test suite" OFF)
-option(BUILD_EXAMPLES "Build example applications" OFF)
-
 # Include directories
 include_directories(
     ${CMAKE_SOURCE_DIR}/include
     ${CMAKE_SOURCE_DIR}/src
-    ${PORTAUDIO_INCLUDE_DIRS}
 )
 
-# Source files
-file(GLOB_RECURSE SOURCES 
-    "src/*.cpp"
-    "src/*.c"
+# Simple GUI executable (standalone, no DAW dependencies)
+add_executable(OmegaDAW_SimpleGUI
+    src/main_simple_gui.cpp
 )
 
-file(GLOB_RECURSE HEADERS 
-    "include/*.h"
-    "include/*.hpp"
+target_link_libraries(OmegaDAW_SimpleGUI 
+    PRIVATE 
+    $<TARGET_NAME_IF_EXISTS:SDL2::SDL2main>
+    $<IF:$<TARGET_EXISTS:SDL2::SDL2>,SDL2::SDL2,SDL2::SDL2-static>
+    $<IF:$<TARGET_EXISTS:SDL2_ttf::SDL2_ttf>,SDL2_ttf::SDL2_ttf,SDL2_ttf::SDL2_ttf-static>
 )
 
-# Main executable
-add_executable(OmegaDAW 
-    ${SOURCES}
-    ${HEADERS}
+# Source files for DAW library
+set(DAW_SOURCES
+    src/AudioEngine.cpp
+    src/AudioBuffer.cpp
+    src/MIDIMessage.cpp
+    src/MIDIDevice.cpp
+    src/MIDIFile.cpp
+    src/MIDISequencer.cpp
+    src/Oscillator.cpp
+    src/Filter.cpp
+    src/Effects.cpp
+    src/Plugin.cpp
+    src/PluginHost.cpp
+    src/BuiltInPlugins.cpp
+    src/Sequencer.cpp
+    src/Track.cpp
+    src/Clip.cpp
+    src/Arrangement.cpp
+    src/Transport.cpp
+    src/Mixer.cpp
+    src/MixerChannel.cpp
+    src/Router.cpp
+    src/FileIO.cpp
+    src/Project.cpp
+    src/DAWApplication.cpp
+    src/UIWindow.cpp
+    src/UIControls.cpp
+    src/UITransport.cpp
+    src/UIMixer.cpp
+    src/UITimeline.cpp
+    src/DAWGUI.cpp
 )
 
-# Link PortAudio
-if(PORTAUDIO_FOUND)
-    target_link_libraries(OmegaDAW ${PORTAUDIO_LIBRARIES})
-    target_include_directories(OmegaDAW PRIVATE ${PORTAUDIO_INCLUDE_DIRS})
-endif()
+# Main GUI executable
+add_executable(OmegaDAW_GUI
+    src/main_gui.cpp
+    ${DAW_SOURCES}
+)
+
+# Link libraries
+target_link_libraries(OmegaDAW_GUI 
+    PRIVATE 
+    portaudio
+    $<TARGET_NAME_IF_EXISTS:SDL2::SDL2main>
+    $<IF:$<TARGET_EXISTS:SDL2::SDL2>,SDL2::SDL2,SDL2::SDL2-static>
+    $<IF:$<TARGET_EXISTS:SDL2_ttf::SDL2_ttf>,SDL2_ttf::SDL2_ttf,SDL2_ttf::SDL2_ttf-static>
+)
+
+# Simple test executable
+add_executable(OmegaDAW_Test
+    src/main.cpp
+)
+
+target_link_libraries(OmegaDAW_Test 
+    PRIVATE 
+    portaudio
+    $<TARGET_NAME_IF_EXISTS:SDL2::SDL2main>
+    $<IF:$<TARGET_EXISTS:SDL2::SDL2>,SDL2::SDL2,SDL2::SDL2-static>
+)
 
 # Platform-specific settings
 if(WIN32)
-    target_compile_definitions(OmegaDAW PRIVATE OMEGA_PLATFORM_WINDOWS)
-    # Link Windows audio libraries
-    target_link_libraries(OmegaDAW 
+    target_compile_definitions(OmegaDAW_GUI PRIVATE OMEGA_PLATFORM_WINDOWS)
+    target_compile_definitions(OmegaDAW_Test PRIVATE OMEGA_PLATFORM_WINDOWS)
+    
+    target_link_libraries(OmegaDAW_GUI 
+        PRIVATE
         winmm
         dsound
         ole32
         oleaut32
     )
-    # If PortAudio not found via pkg-config, try manual link
-    if(NOT PORTAUDIO_FOUND)
-        target_link_libraries(OmegaDAW portaudio)
-    endif()
-elseif(UNIX AND NOT APPLE)
-    target_compile_definitions(OmegaDAW PRIVATE OMEGA_PLATFORM_LINUX)
-    target_link_libraries(OmegaDAW 
-        asound
-        pthread
-    )
-elseif(APPLE)
-    target_compile_definitions(OmegaDAW PRIVATE OMEGA_PLATFORM_MAC)
-    find_library(COREAUDIO_LIBRARY CoreAudio)
-    find_library(COREMIDI_LIBRARY CoreMIDI)
-    target_link_libraries(OmegaDAW 
-        ${COREAUDIO_LIBRARY}
-        ${COREMIDI_LIBRARY}
+    
+    target_link_libraries(OmegaDAW_Test 
+        PRIVATE
+        winmm
+        dsound
+        ole32
+        oleaut32
     )
 endif()
 
-# Compiler warnings
-if(MSVC)
-    target_compile_options(OmegaDAW PRIVATE /W4)
-else()
-    target_compile_options(OmegaDAW PRIVATE -Wall -Wextra -pedantic)
-endif()
-
-# Installation rules
-install(TARGETS OmegaDAW DESTINATION bin)
-
-# Tests
-if(BUILD_TESTS)
-    enable_testing()
-    add_subdirectory(tests)
-endif()
-
-# Examples
-if(BUILD_EXAMPLES)
-    add_subdirectory(examples)
-endif()
-
-message(STATUS "Omega DAW Configuration:")
+message(STATUS "Omega DAW Test Configuration:")
 message(STATUS "  Version: ${PROJECT_VERSION}")
 message(STATUS "  Build type: ${CMAKE_BUILD_TYPE}")
 message(STATUS "  C++ standard: ${CMAKE_CXX_STANDARD}")

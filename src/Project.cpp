@@ -2,7 +2,7 @@
 #include <fstream>
 #include <iostream>
 
-namespace omega {
+namespace OmegaDAW {
 
 Project::Project(const std::string& name)
     : name_(name)
@@ -78,4 +78,23 @@ void Project::setBufferSize(int bufferSize) {
     modified_ = true;
 }
 
-} // namespace omega
+void Project::clear() {
+    tracks_.clear();
+    name_ = "Untitled";
+    filepath_ = "";
+    modified_ = false;
+    arrangementData_ = "";
+    mixerData_ = "";
+}
+
+void Project::setArrangementData(const std::string& data) {
+    arrangementData_ = data;
+    modified_ = true;
+}
+
+void Project::setMixerData(const std::string& data) {
+    mixerData_ = data;
+    modified_ = true;
+}
+
+} // namespace OmegaDAW

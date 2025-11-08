@@ -1,6 +1,6 @@
 #include "MixerChannel.h"
 
-namespace omega {
+namespace OmegaDAW {
 
 MixerChannel::MixerChannel()
     : preGain_(1.0f)
@@ -52,4 +52,4 @@ void MixerChannel::setPostGain(float gain) {
     postGain_ = gain;
 }
 
-} // namespace omega
+} // namespace OmegaDAW

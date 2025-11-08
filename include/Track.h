@@ -6,7 +6,7 @@
 #include <vector>
 #include <memory>
 
-namespace omega {
+namespace OmegaDAW {
 
 enum class TrackType {
     Audio,
@@ -58,6 +58,6 @@ private:
     AudioBuffer trackBuffer_;
 };
 
-} // namespace omega
+} // namespace OmegaDAW
 
 #endif // OMEGA_DAW_TRACK_H

@@ -2,7 +2,7 @@
 #include <algorithm>
 #include <cmath>
 
-namespace omega {
+namespace OmegaDAW {
 
 // MixerBus implementation
 
@@ -301,4 +301,30 @@ std::vector<int> Mixer::getBusIds() const {
     return ids;
 }
 
-} // namespace omega
+void Mixer::process(AudioBuffer& buffer) {
+    // Process mixer with provided buffer
+    processRoutingGraph();
+}
+
+void Mixer::shutdown() {
+    // Shutdown mixer
+    buses_.clear();
+}
+
+void Mixer::loadFromProject(Project* project) {
+    // Load mixer from project
+    if (project) {
+        // Parse mixer data
+    }
+}
+
+std::string Mixer::serialize() const {
+    // Serialize mixer to string
+    return "";
+}
+
+void Mixer::setOutputCallback(std::function<void(const AudioBuffer&)> callback) {
+    outputCallback_ = callback;
+}
+
+} // namespace OmegaDAW

@@ -43,11 +43,11 @@ public:
     float getParameter(const std::string& id) const;
     std::vector<PluginParameter> getParameters() const;
     
-    void setBypass(bool bypass) { isBypassed = bypass; }
-    bool isBypassed() const { return isBypassed; }
+    void setBypass(bool bypass) { bypassed = bypass; }
+    bool isBypassed() const { return bypassed; }
     
-    void setEnabled(bool enabled) { isEnabled = enabled; }
-    bool isEnabled() const { return isEnabled; }
+    void setEnabled(bool enabled) { enabled_ = enabled; }
+    bool isEnabled() const { return enabled_; }
 
 protected:
     void addParameter(const PluginParameter& param);
@@ -56,8 +56,8 @@ protected:
     std::string version;
     std::string vendor;
     PluginType type;
-    bool isBypassed;
-    bool isEnabled;
+    bool bypassed;
+    bool enabled_;
     int sampleRate;
     int maxBufferSize;
     

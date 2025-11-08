@@ -8,7 +8,7 @@
 #include <map>
 #include <string>
 
-namespace omega {
+namespace OmegaDAW {
 
 enum class ChannelType {
     Audio,
@@ -78,7 +78,9 @@ public:
 
     void initialize(int sampleRate, int bufferSize);
     void process();
+    void process(AudioBuffer& buffer);
     void reset();
+    void shutdown();
 
     int addBus(const std::string& name, ChannelType type);
     void removeBus(int busId);
@@ -96,8 +98,14 @@ public:
     bool isSoloMode() const { return soloMode_; }
 
     std::vector<int> getBusIds() const;
+    
+    // Integration methods
+    void loadFromProject(class Project* project);
+    std::string serialize() const;
+    void setOutputCallback(std::function<void(const AudioBuffer&)> callback);
 
 private:
+    std::function<void(const AudioBuffer&)> outputCallback_;
     void processRoutingGraph();
     void sortBusesTopologically();
     
@@ -114,6 +122,6 @@ private:
     AudioBuffer masterOutput_;
 };
 
-} // namespace omega
+} // namespace OmegaDAW
 
 #endif // OMEGA_DAW_MIXER_H

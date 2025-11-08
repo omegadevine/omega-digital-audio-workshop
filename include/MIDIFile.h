@@ -7,7 +7,7 @@
 #include <vector>
 #include <memory>
 
-namespace omega {
+namespace OmegaDAW {
 
 enum class MIDIFileFormat {
     SingleTrack = 0,
@@ -44,8 +44,8 @@ public:
     const MIDITrackData& getTrack(int index) const { return tracks_[index]; }
     MIDITrackData& getTrack(int index) { return tracks_[index]; }
     
-    void convertToClips(std::vector<std::shared_ptr<MIDIClip>>& clips) const;
-    void loadFromClips(const std::vector<std::shared_ptr<MIDIClip>>& clips);
+    // void convertToClips(std::vector<std::shared_ptr<MIDIClip>>& clips) const;
+    // void loadFromClips(const std::vector<std::shared_ptr<MIDIClip>>& clips);
     
     double ticksToSeconds(int ticks) const;
     int secondsToTicks(double seconds) const;
@@ -63,6 +63,6 @@ private:
     void writeVariableLength(std::ofstream& file, uint32_t value);
 };
 
-} // namespace omega
+} // namespace OmegaDAW
 
 #endif // OMEGA_DAW_MIDI_FILE_H

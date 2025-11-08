@@ -7,7 +7,7 @@
 #include <functional>
 #include <memory>
 
-namespace omega {
+namespace OmegaDAW {
 
 struct MIDIDeviceInfo {
     std::string name;
@@ -84,6 +84,6 @@ private:
     std::vector<std::shared_ptr<MIDIOutputDevice>> openOutputs_;
 };
 
-} // namespace omega
+} // namespace OmegaDAW
 
 #endif // OMEGA_DAW_MIDI_DEVICE_H

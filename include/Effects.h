@@ -4,7 +4,7 @@
 #include "AudioEngine.h"
 #include <vector>
 
-namespace omega {
+namespace OmegaDAW {
 
 class Delay : public IAudioProcessor {
 public:
@@ -77,6 +77,6 @@ private:
     static const int numCombs = 4;
 };
 
-} // namespace omega
+} // namespace OmegaDAW
 
 #endif // OMEGA_DAW_DELAY_H

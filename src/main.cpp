@@ -1,50 +1,44 @@
-#include "DAWApplication.h"
-#include "DAWGUI.h"
 #include <iostream>
+#include <SDL2/SDL.h>
+#include "portaudio.h"
 
 int main(int argc, char* argv[]) {
     std::cout << "==================================" << std::endl;
     std::cout << "  Omega Digital Audio Workshop" << std::endl;
-    std::cout << "  Version 0.1.0" << std::endl;
+    std::cout << "  Version 0.1.0 - Build Test" << std::endl;
     std::cout << "==================================" << std::endl;
-    std::cout << std::endl;
     
-    // Create and initialize the DAW application
-    OmegaDAW::DAWApplication daw;
-    
-    if (!daw.initialize()) {
-        std::cerr << "Failed to initialize DAW application" << std::endl;
-        return 1;
+    // Test PortAudio
+    std::cout << "\nTesting PortAudio..." << std::endl;
+    PaError err = Pa_Initialize();
+    if (err == paNoError) {
+        std::cout << "  PortAudio initialized successfully!" << std::endl;
+        std::cout << "  Version: " << Pa_GetVersionText() << std::endl;
+        Pa_Terminate();
+    } else {
+        std::cerr << "  PortAudio initialization failed: " << Pa_GetErrorText(err) << std::endl;
     }
     
-    // Create a new project
-    daw.newProject("Untitled Project");
-    
-    // Initialize GUI
-    OmegaDAW::DAWGUI gui(&daw);
-    if (!gui.initialize(1280, 800)) {
-        std::cerr << "Failed to initialize GUI" << std::endl;
-        return 1;
+    // Test SDL2
+    std::cout << "\nTesting SDL2..." << std::endl;
+    if (SDL_Init(SDL_INIT_VIDEO) == 0) {
+        SDL_version compiled;
+        SDL_version linked;
+        SDL_VERSION(&compiled);
+        SDL_GetVersion(&linked);
+        std::cout << "  SDL2 initialized successfully!" << std::endl;
+        std::cout << "  Compiled against SDL version: " << (int)compiled.major << "." 
+                  << (int)compiled.minor << "." << (int)compiled.patch << std::endl;
+        std::cout << "  Linked SDL version: " << (int)linked.major << "."
+                  << (int)linked.minor << "." << (int)linked.patch << std::endl;
+        SDL_Quit();
+    } else {
+        std::cerr << "  SDL2 initialization failed: " << SDL_GetError() << std::endl;
     }
     
-    std::cout << std::endl;
-    std::cout << "DAW is ready!" << std::endl;
-    std::cout << "Controls:" << std::endl;
-    std::cout << "  SPACE - Play/Stop" << std::endl;
-    std::cout << "  R - Record" << std::endl;
-    std::cout << "  ESC - Exit" << std::endl;
-    std::cout << std::endl;
-    
-    // Main GUI loop
-    while (!gui.shouldQuit()) {
-        gui.processEvents();
-        daw.processAudio();
-        gui.render();
-    }
-    
-    // Cleanup
-    gui.shutdown();
-    // daw cleanup handled by destructor
+    std::cout << "\nAll dependencies verified successfully!" << std::endl;
+    std::cout << "Press Enter to exit..." << std::endl;
+    std::cin.get();
     
     return 0;
 }

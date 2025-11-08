@@ -1,4 +1,5 @@
 #include "DAWApplication.h"
+#include "MIDIDevice.h"
 #include <iostream>
 
 namespace OmegaDAW {
@@ -12,6 +13,10 @@ DAWApplication::~DAWApplication() {
 }
 
 bool DAWApplication::initialize() {
+    return initialize(44100, 512);
+}
+
+bool DAWApplication::initialize(int sampleRate, int bufferSize) {
     std::cout << "Initializing Omega DAW Application..." << std::endl;
     
     try {
@@ -26,24 +31,24 @@ bool DAWApplication::initialize() {
         arrangement = std::make_unique<Arrangement>();
         transport = std::make_unique<Transport>();
         project = std::make_unique<Project>();
-        fileIO = std::make_unique<FileIO>();
+        fileIO = &FileManager::getInstance();
         uiWindow = std::make_unique<UIWindow>();
         
         // Initialize components
-        if (!audioEngine->initialize(44100, 512, 2)) {
+        if (!audioEngine->initialize(sampleRate, bufferSize, 2)) {
             std::cerr << "Failed to initialize audio engine" << std::endl;
             return false;
         }
         
-        if (!midiDevice->initialize()) {
-            std::cerr << "Warning: Failed to initialize MIDI device" << std::endl;
-        }
+        // if (!midiDevice->initialize()) {
+        //     std::cerr << "Warning: Failed to initialize MIDI device" << std::endl;
+        // }
         
-        midiSequencer->initialize();
-        pluginHost->initialize();
+        // midiSequencer->initialize();
+        // pluginHost->initialize();
         mixer->initialize(audioEngine->getSampleRate(), audioEngine->getBufferSize());
-        router->initialize();
-        sequencer->initialize();
+        // router->initialize();
+        // sequencer->initialize();
         arrangement->initialize();
         transport->initialize();
         
@@ -69,33 +74,33 @@ bool DAWApplication::initialize() {
 
 void DAWApplication::connectComponents() {
     // Connect MIDI device to sequencer
-    midiDevice->setMessageCallback([this](const MIDIMessage& msg) {
-        midiSequencer->processMIDIMessage(msg);
-    });
+    // midiDevice->setMessageCallback([this](const MIDIMessage& msg) {
+    //     midiSequencer->processMIDIMessage(msg);
+    // });
     
     // Connect transport to sequencer and arrangement
     transport->setPlayCallback([this]() {
-        sequencer->start();
+        // sequencer->start();
         arrangement->start();
     });
     
     transport->setStopCallback([this]() {
-        sequencer->stop();
+        // sequencer->stop();
         arrangement->stop();
     });
     
     // Connect sequencer to mixer through router
-    sequencer->setOutputCallback([this](const AudioBuffer& buffer) {
-        router->routeAudio(buffer, mixer.get());
-    });
+    // sequencer->setOutputCallback([this](const AudioBuffer& buffer) {
+    //     router->routeAudio(buffer, mixer.get());
+    // });
     
     // Connect mixer to audio engine
-    mixer->setOutputCallback([this](const AudioBuffer& buffer) {
-        audioEngine->processBuffer(buffer);
-    });
+    // mixer->setOutputCallback([this](const AudioBuffer& buffer) {
+    //     audioEngine->processBuffer(buffer);
+    // });
     
     // Connect plugin host to mixer
-    pluginHost->setMixer(mixer.get());
+    // pluginHost->setMixer(mixer.get());
     
     std::cout << "Component connections established" << std::endl;
 }
@@ -114,12 +119,12 @@ void DAWApplication::shutdown() {
     if (uiWindow) uiWindow->shutdown();
     if (transport) transport->shutdown();
     if (arrangement) arrangement->shutdown();
-    if (sequencer) sequencer->shutdown();
-    if (router) router->shutdown();
+    // if (sequencer) sequencer->shutdown();
+    // if (router) router->shutdown();
     if (mixer) mixer->shutdown();
-    if (pluginHost) pluginHost->shutdown();
-    if (midiSequencer) midiSequencer->shutdown();
-    if (midiDevice) midiDevice->shutdown();
+    // if (pluginHost) pluginHost->shutdown();
+    // if (midiSequencer) midiSequencer->shutdown();
+    // if (midiDevice) midiDevice->shutdown();
     if (audioEngine) audioEngine->shutdown();
     
     initialized = false;
@@ -133,7 +138,7 @@ bool DAWApplication::run() {
         return false;
     }
     
-    while (running && uiWindow->isOpen()) {
+    while (running && uiWindow->isRunning()) {
         // Process events
         processEvents();
         
@@ -153,11 +158,11 @@ void DAWApplication::processAudio() {
     // Get current playback position
     double position = transport->getPosition();
     
-    // Process MIDI sequencer
-    auto midiEvents = midiSequencer->getEventsAtPosition(position);
-    for (const auto& event : midiEvents) {
-        pluginHost->processMIDI(event);
-    }
+    // Process MIDI sequencer - commented out for now
+    // auto midiEvents = midiSequencer->getEventsAtPosition(position);
+    // for (const auto& event : midiEvents) {
+    //     pluginHost->processMIDI(event);
+    // }
     
     // Process arrangement
     auto audioBuffer = arrangement->renderAtPosition(position);
@@ -171,7 +176,7 @@ void DAWApplication::processAudio() {
 
 void DAWApplication::processEvents() {
     uiWindow->processEvents();
-    midiDevice->processEvents();
+    // midiDevice->processEvents(); // Commented out until MIDIDevice is fully implemented
 }
 
 void DAWApplication::updateUI() {
@@ -203,15 +208,37 @@ bool DAWApplication::newProject(const std::string& projectName) {
 }
 
 bool DAWApplication::loadProject(const std::string& filepath) {
-    if (!fileIO->loadProject(filepath, project.get())) {
-        std::cerr << "Failed to load project: " << filepath << std::endl;
+    std::string projectData;
+    auto result = fileIO->loadProject(filepath, projectData);
+    if (!result.success) {
+        std::cerr << "Failed to load project: " << filepath << " - " << result.errorMessage << std::endl;
         return false;
     }
     
-    // Apply project data to components
-    arrangement->loadFromProject(project.get());
-    mixer->loadFromProject(project.get());
+    // Parse basic project data from string
+    // Format: "name:value\nname:value\n..."
+    size_t pos = 0;
+    while (pos < projectData.length()) {
+        size_t endPos = projectData.find('\n', pos);
+        if (endPos == std::string::npos) endPos = projectData.length();
+        
+        std::string line = projectData.substr(pos, endPos - pos);
+        size_t colonPos = line.find(':');
+        if (colonPos != std::string::npos) {
+            std::string key = line.substr(0, colonPos);
+            std::string value = line.substr(colonPos + 1);
+            
+            if (key == "name") {
+                project->setName(value);
+            } else if (key == "tempo" && transport) {
+                transport->setTempo(std::stod(value));
+            }
+        }
+        
+        pos = endPos + 1;
+    }
     
+    project->setFilePath(filepath);
     std::cout << "Project loaded: " << filepath << std::endl;
     return true;
 }
@@ -221,11 +248,24 @@ bool DAWApplication::saveProject(const std::string& filepath) {
     project->setArrangementData(arrangement->serialize());
     project->setMixerData(mixer->serialize());
     
-    if (!fileIO->saveProject(filepath, project.get())) {
-        std::cerr << "Failed to save project: " << filepath << std::endl;
+    // Serialize project to simple text format
+    std::string projectData;
+    projectData += "name:" + project->getName() + "\n";
+    if (transport) {
+        projectData += "tempo:" + std::to_string(transport->getTempo()) + "\n";
+        projectData += "timesig:" + std::to_string(transport->getTimeSignature().first) + 
+                      "/" + std::to_string(transport->getTimeSignature().second) + "\n";
+    }
+    projectData += "samplerate:" + std::to_string(project->getSampleRate()) + "\n";
+    projectData += "buffersize:" + std::to_string(project->getBufferSize()) + "\n";
+    
+    auto result = fileIO->saveProject(filepath, projectData);
+    if (!result.success) {
+        std::cerr << "Failed to save project: " << filepath << " - " << result.errorMessage << std::endl;
         return false;
     }
     
+    project->setFilePath(filepath);
     std::cout << "Project saved: " << filepath << std::endl;
     return true;
 }

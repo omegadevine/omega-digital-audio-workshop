@@ -4,7 +4,7 @@
 #include <cstdint>
 #include <functional>
 
-namespace omega {
+namespace OmegaDAW {
 
 class Transport {
 public:
@@ -37,6 +37,7 @@ public:
     
     void setPosition(double beats);
     double getPosition() const { return positionInBeats_; }
+    double getPositionSeconds() const { return positionInBeats_ / (tempo_ / 60.0); }
     
     void setSampleRate(int sampleRate);
     int getSampleRate() const { return sampleRate_; }
@@ -73,8 +74,15 @@ private:
     
     double samplesToBeats(int64_t samples) const;
     int64_t beatsToSamples(double beats) const;
+    
+public:
+    // Integration methods
+    void initialize();
+    void shutdown();
+    void reset();
+    void advance();
 };
 
-} // namespace omega
+} // namespace OmegaDAW
 
 #endif // OMEGA_DAW_TRANSPORT_H

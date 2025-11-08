@@ -3,7 +3,7 @@
 #include <cmath>
 #include <queue>
 
-namespace omega {
+namespace OmegaDAW {
 
 // AudioNode implementation
 
@@ -443,4 +443,4 @@ void SplitNode::reset() {
     clearOutputs();
 }
 
-} // namespace omega
+} // namespace OmegaDAW

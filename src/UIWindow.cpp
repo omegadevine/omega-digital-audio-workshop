@@ -85,13 +85,41 @@ void UIWindow::processEvents() {
 void UIWindow::render() {
     // Clear background
     // Platform-specific rendering would go here
-    
+
     // Render all visible components
     for (auto& component : components) {
         if (component && component->isVisible()) {
             component->render();
         }
     }
+}
+
+bool UIWindow::initialize(const std::string& title, int w, int h) {
+    this->title = title;
+    this->width = w;
+    this->height = h;
+    running = true;
+    return initialize();
+}
+
+void UIWindow::beginFrame() {
+    // Begin frame rendering
+}
+
+void UIWindow::endFrame() {
+    // End frame rendering
+}
+
+void UIWindow::drawTransport(Transport* transport) {
+    // Draw transport controls
+}
+
+void UIWindow::drawMixer(Mixer* mixer) {
+    // Draw mixer
+}
+
+void UIWindow::drawTimeline(Arrangement* arrangement, double position) {
+    // Draw timeline
 }
 
 }

@@ -2,7 +2,7 @@
 #include <algorithm>
 #include <cmath>
 
-namespace omega {
+namespace OmegaDAW {
 
 Track::Track(const std::string& name, TrackType type)
     : name_(name)
@@ -61,4 +61,4 @@ void Track::setRecordEnabled(bool enabled) {
     recordEnabled_ = enabled;
 }
 
-} // namespace omega
+} // namespace OmegaDAW

@@ -60,7 +60,7 @@ void MIDIClip::addNote(const MIDIMessage& note) {
     m_notes.push_back(note);
     std::sort(m_notes.begin(), m_notes.end(), 
         [](const MIDIMessage& a, const MIDIMessage& b) {
-            return a.timestamp < b.timestamp;
+            return a.getTimestamp() < b.getTimestamp();
         });
 }
 
@@ -77,7 +77,7 @@ void MIDIClip::clearNotes() {
 std::vector<MIDIMessage> MIDIClip::getNotesInRange(double startTime, double endTime) const {
     std::vector<MIDIMessage> result;
     for (const auto& note : m_notes) {
-        if (note.timestamp >= startTime && note.timestamp < endTime) {
+        if (note.getTimestamp() >= startTime && note.getTimestamp() < endTime) {
             result.push_back(note);
         }
     }
@@ -86,23 +86,37 @@ std::vector<MIDIMessage> MIDIClip::getNotesInRange(double startTime, double endT
 
 void MIDIClip::quantize(double gridSize) {
     for (auto& note : m_notes) {
-        note.timestamp = std::round(note.timestamp / gridSize) * gridSize;
+        double timestamp = note.getTimestamp();
+        double quantized = std::round(timestamp / gridSize) * gridSize;
+        note.setTimestamp(quantized);
     }
     std::sort(m_notes.begin(), m_notes.end(), 
         [](const MIDIMessage& a, const MIDIMessage& b) {
-            return a.timestamp < b.timestamp;
+            return a.getTimestamp() < b.getTimestamp();
         });
 }
 
 void MIDIClip::transpose(int semitones) {
-    for (auto& note : m_notes) {
-        if (note.type == MIDIMessageType::NoteOn || note.type == MIDIMessageType::NoteOff) {
-            int newNote = note.data1 + semitones;
+    std::vector<MIDIMessage> transposedNotes;
+    for (const auto& note : m_notes) {
+        if (note.isNoteOn() || note.isNoteOff()) {
+            int newNote = note.getNoteNumber() + semitones;
             if (newNote >= 0 && newNote <= 127) {
-                note.data1 = static_cast<uint8_t>(newNote);
+                MIDIMessage transposed(
+                    note.getStatus(),
+                    static_cast<uint8_t>(newNote),
+                    note.getData2()
+                );
+                transposed.setTimestamp(note.getTimestamp());
+                transposedNotes.push_back(transposed);
+            } else {
+                transposedNotes.push_back(note);
             }
+        } else {
+            transposedNotes.push_back(note);
         }
     }
+    m_notes = transposedNotes;
 }
 
 void MIDIClip::setVelocity(uint8_t velocity) {

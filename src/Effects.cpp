@@ -2,7 +2,7 @@
 #include <algorithm>
 #include <cmath>
 
-namespace omega {
+namespace OmegaDAW {
 
 // ============================================================================
 // Delay Implementation
@@ -209,4 +209,4 @@ float Reverb::CombFilter::process(float input) {
     return output;
 }
 
-} // namespace omega
+} // namespace OmegaDAW

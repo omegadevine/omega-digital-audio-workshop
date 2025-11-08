@@ -2,7 +2,6 @@
 #define DAW_APPLICATION_H
 
 #include "AudioEngine.h"
-#include "MIDIDevice.h"
 #include "MIDISequencer.h"
 #include "PluginHost.h"
 #include "Mixer.h"
@@ -18,12 +17,16 @@
 
 namespace OmegaDAW {
 
+// Forward declarations
+class MIDIDevice;
+
 class DAWApplication {
 public:
     DAWApplication();
     ~DAWApplication();
     
     bool initialize();
+    bool initialize(int sampleRate, int bufferSize);
     void shutdown();
     
     bool run();
@@ -40,7 +43,7 @@ public:
     Arrangement* getArrangement() { return arrangement.get(); }
     Transport* getTransport() { return transport.get(); }
     Project* getProject() { return project.get(); }
-    FileIO* getFileIO() { return fileIO.get(); }
+    FileManager* getFileIO() { return fileIO; }
     UIWindow* getUIWindow() { return uiWindow.get(); }
     
     // Project Operations
@@ -74,7 +77,7 @@ private:
     std::unique_ptr<Arrangement> arrangement;
     std::unique_ptr<Transport> transport;
     std::unique_ptr<Project> project;
-    std::unique_ptr<FileIO> fileIO;
+    FileManager* fileIO;
     std::unique_ptr<UIWindow> uiWindow;
     
     bool running;

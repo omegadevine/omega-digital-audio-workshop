@@ -4,7 +4,7 @@
 #include "AudioEngine.h"
 #include <cmath>
 
-namespace omega {
+namespace OmegaDAW {
 
 enum class WaveformType {
     Sine,
@@ -43,6 +43,6 @@ private:
     int sampleRate_;
 };
 
-} // namespace omega
+} // namespace OmegaDAW
 
 #endif // OMEGA_DAW_OSCILLATOR_H

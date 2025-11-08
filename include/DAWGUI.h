@@ -3,6 +3,7 @@
 
 #include "DAWApplication.h"
 #include <SDL2/SDL.h>
+#include <SDL2/SDL_ttf.h>
 #include <string>
 #include <vector>
 #include <memory>
@@ -25,8 +26,8 @@ struct GUIColors {
 
 // GUI components
 struct Button {
-    SDL_Rect rect;
     std::string label;
+    SDL_Rect rect;
     bool hovered = false;
     bool pressed = false;
 };
@@ -81,6 +82,7 @@ private:
     DAWApplication* daw;
     SDL_Window* window;
     SDL_Renderer* renderer;
+    TTF_Font* font;
     
     GUIColors colors;
     
