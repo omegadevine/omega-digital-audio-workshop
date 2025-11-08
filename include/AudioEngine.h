@@ -19,6 +19,12 @@ public:
     virtual ~IAudioProcessor() = default;
     virtual void process(float** inputs, float** outputs, int numChannels, int numFrames) = 0;
     virtual void prepare(int sampleRate, int maxBufferSize) = 0;
+    virtual bool isBypassed() const { return bypassed_; }
+    virtual void setBypassed(bool bypassed) { bypassed_ = bypassed; }
+    virtual std::string getName() const { return "Unknown Processor"; }
+    
+protected:
+    bool bypassed_ = false;
 };
 
 // Audio device info
@@ -126,6 +132,18 @@ public:
     void setOverdubMode(bool enabled) { overdubMode_ = enabled; }
     bool isOverdubMode() const { return overdubMode_; }
     
+    // Performance optimization
+    void setThreadPriority(int priority); // Set audio thread priority
+    void enableDenormalPrevention(bool enable) { preventDenormals_ = enable; }
+    
+    // Advanced processor management
+    size_t getProcessorCount() const { return processors_.size(); }
+    std::shared_ptr<IAudioProcessor> getProcessor(size_t index);
+    void setProcessorBypassed(size_t index, bool bypassed);
+    
+    // Buffer pre-allocation
+    void preallocateBuffers(int maxBufferSize);
+    
 private:
     // Audio callback (static for C API)
     static int paCallback(const void* inputBuffer, void* outputBuffer,
@@ -185,6 +203,10 @@ private:
     bool monitoringEnabled_;
     float inputGain_;
     bool overdubMode_;
+    
+    // Performance optimization
+    bool preventDenormals_;
+    int maxPreallocatedBufferSize_;
 };
 
 } // namespace OmegaDAW

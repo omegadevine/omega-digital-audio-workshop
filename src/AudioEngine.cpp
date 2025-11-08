@@ -6,6 +6,13 @@
 #include <cstring>
 #include <fstream>
 
+#ifdef _WIN32
+#include <windows.h>
+#else
+#include <pthread.h>
+#include <sched.h>
+#endif
+
 namespace OmegaDAW {
 
 // Resampler implementation
@@ -133,7 +140,9 @@ AudioEngine::AudioEngine()
     , isRecording_(false)
     , monitoringEnabled_(false)
     , inputGain_(1.0f)
-    , overdubMode_(false) {
+    , overdubMode_(false) 
+    , preventDenormals_(true)
+    , maxPreallocatedBufferSize_(0) {
     
     // Initialize PortAudio
     PaError err = Pa_Initialize();
@@ -272,6 +281,112 @@ bool AudioEngine::initialize(int sampleRate, int bufferSize, int numChannels) {
     std::cout << "  Sample Rate: " << sampleRate_ << " Hz" << std::endl;
     std::cout << "  Buffer Size: " << bufferSize_ << " samples" << std::endl;
     std::cout << "  Channels: " << numChannels_ << std::endl;
+    std::cout << "  Output Latency: " << (outputLatency_ * 1000.0) << " ms" << std::endl;
+    
+    return true;
+}
+
+bool AudioEngine::initializeWithInput(int sampleRate, int bufferSize, int numOutputChannels, int numInputChannels) {
+    if (initialized_) {
+        std::cerr << "Audio engine already initialized" << std::endl;
+        return false;
+    }
+    
+    sampleRate_ = sampleRate;
+    bufferSize_ = bufferSize;
+    numChannels_ = numOutputChannels;
+    numInputChannels_ = numInputChannels;
+    hasInput_ = (numInputChannels > 0);
+    
+    // Initialize metering arrays
+    peakLevels_.resize(numChannels_, 0.0f);
+    rmsLevels_.resize(numChannels_, 0.0f);
+    
+    // Initialize internal buffers
+    internalBuffers_.resize(numChannels_);
+    for (auto& buffer : internalBuffers_) {
+        buffer.resize(bufferSize_, 0.0f);
+    }
+    
+    // Initialize input buffers
+    if (hasInput_) {
+        inputBuffers_.resize(numInputChannels_);
+        for (auto& buffer : inputBuffers_) {
+            buffer.resize(bufferSize_, 0.0f);
+        }
+    }
+    
+    // Setup PortAudio output stream parameters
+    PaStreamParameters outputParams;
+    outputParams.device = (selectedDeviceIndex_ >= 0) ? selectedDeviceIndex_ : Pa_GetDefaultOutputDevice();
+    
+    if (outputParams.device == paNoDevice) {
+        std::cerr << "No default output device found" << std::endl;
+        return false;
+    }
+    
+    const PaDeviceInfo* outputDeviceInfo = Pa_GetDeviceInfo(outputParams.device);
+    outputParams.channelCount = std::min(numChannels_, outputDeviceInfo->maxOutputChannels);
+    outputParams.sampleFormat = paFloat32;
+    outputParams.suggestedLatency = outputDeviceInfo->defaultLowOutputLatency;
+    outputParams.hostApiSpecificStreamInfo = nullptr;
+    
+    // Setup input stream parameters if needed
+    PaStreamParameters* inputParamsPtr = nullptr;
+    PaStreamParameters inputParams;
+    if (hasInput_) {
+        inputParams.device = (selectedInputDeviceIndex_ >= 0) ? selectedInputDeviceIndex_ : Pa_GetDefaultInputDevice();
+        
+        if (inputParams.device == paNoDevice) {
+            std::cerr << "No default input device found" << std::endl;
+            return false;
+        }
+        
+        const PaDeviceInfo* inputDeviceInfo = Pa_GetDeviceInfo(inputParams.device);
+        inputParams.channelCount = std::min(numInputChannels_, inputDeviceInfo->maxInputChannels);
+        inputParams.sampleFormat = paFloat32;
+        inputParams.suggestedLatency = inputDeviceInfo->defaultLowInputLatency;
+        inputParams.hostApiSpecificStreamInfo = nullptr;
+        inputParamsPtr = &inputParams;
+    }
+    
+    // Open stream with input and output
+    PaError err = Pa_OpenStream(
+        &stream_,
+        inputParamsPtr,  // Input
+        &outputParams,    // Output
+        sampleRate_,
+        bufferSize_,
+        paClipOff,  // We'll handle clipping
+        &AudioEngine::paCallback,
+        this  // User data
+    );
+    
+    if (err != paNoError) {
+        std::cerr << "Failed to open audio stream: " << Pa_GetErrorText(err) << std::endl;
+        return false;
+    }
+    
+    // Get latency information
+    const PaStreamInfo* streamInfo = Pa_GetStreamInfo(stream_);
+    if (streamInfo) {
+        inputLatency_ = streamInfo->inputLatency;
+        outputLatency_ = streamInfo->outputLatency;
+    }
+    
+    initialized_ = true;
+    
+    std::cout << "Audio Engine initialized with input:" << std::endl;
+    std::cout << "  Output Device: " << outputDeviceInfo->name << std::endl;
+    if (hasInput_ && inputParamsPtr) {
+        const PaDeviceInfo* inputDeviceInfo = Pa_GetDeviceInfo(inputParams.device);
+        std::cout << "  Input Device: " << inputDeviceInfo->name << std::endl;
+        std::cout << "  Input Channels: " << numInputChannels_ << std::endl;
+        std::cout << "  Input Latency: " << (inputLatency_ * 1000.0) << " ms" << std::endl;
+    }
+    std::cout << "  Sample Rate: " << sampleRate_ << " Hz" << std::endl;
+    std::cout << "  Buffer Size: " << bufferSize_ << " samples" << std::endl;
+    std::cout << "  Output Channels: " << numChannels_ << std::endl;
     std::cout << "  Output Latency: " << (outputLatency_ * 1000.0) << " ms" << std::endl;
     
     return true;
@@ -452,12 +567,18 @@ int AudioEngine::paCallback(const void* inputBuffer, void* outputBuffer,
 }
 
 void AudioEngine::processAudio(const float* inputBuffer, float* outputBuffer, int numFrames) {
+    // Denormal prevention - add tiny DC offset to prevent CPU spikes
+    static const float antiDenormal = 1.0e-20f;
+    
     // Process input if available
     if (hasInput_ && inputBuffer) {
         // Deinterleave input
         for (int frame = 0; frame < numFrames; ++frame) {
             for (int ch = 0; ch < numInputChannels_; ++ch) {
                 float sample = inputBuffer[frame * numInputChannels_ + ch] * inputGain_;
+                if (preventDenormals_) {
+                    sample += antiDenormal;
+                }
                 inputBuffers_[ch][frame] = sample;
             }
         }
@@ -491,8 +612,11 @@ void AudioEngine::processAudio(const float* inputBuffer, float* outputBuffer, in
             }
         }
         
+        // Process through each non-bypassed processor
         for (auto& processor : processors_) {
-            processor->process(inputs, outputs, numChannels_, numFrames);
+            if (!processor->isBypassed()) {
+                processor->process(inputs, outputs, numChannels_, numFrames);
+            }
         }
         
         if (inputs) {
@@ -510,7 +634,17 @@ void AudioEngine::processAudio(const float* inputBuffer, float* outputBuffer, in
                 sample += inputBuffers_[ch][frame] * masterVolume_;
             }
             
-            // Soft clipping
+            // Denormal prevention
+            if (preventDenormals_) {
+                sample += antiDenormal;
+            }
+            
+            // Soft clipping with tanh for smoother saturation
+            if (std::abs(sample) > 0.9f) {
+                sample = std::tanh(sample * 0.5f) * 2.0f;
+            }
+            
+            // Hard clip as safety
             if (sample > 1.0f) sample = 1.0f;
             else if (sample < -1.0f) sample = -1.0f;
             
@@ -550,6 +684,59 @@ void AudioEngine::resetMetering() {
     std::lock_guard<std::mutex> lock(meteringMutex_);
     std::fill(peakLevels_.begin(), peakLevels_.end(), 0.0f);
     std::fill(rmsLevels_.begin(), rmsLevels_.end(), 0.0f);
+}
+
+void AudioEngine::setThreadPriority(int priority) {
+#ifdef _WIN32
+    // Windows thread priority
+    HANDLE thread = GetCurrentThread();
+    SetThreadPriority(thread, priority);
+    std::cout << "Audio thread priority set to: " << priority << std::endl;
+#else
+    // POSIX thread priority (Linux/macOS)
+    struct sched_param param;
+    param.sched_priority = priority;
+    if (pthread_setschedparam(pthread_self(), SCHED_FIFO, &param) == 0) {
+        std::cout << "Audio thread priority set to: " << priority << std::endl;
+    } else {
+        std::cerr << "Failed to set thread priority (may need root/admin)" << std::endl;
+    }
+#endif
+}
+
+std::shared_ptr<IAudioProcessor> AudioEngine::getProcessor(size_t index) {
+    std::lock_guard<std::mutex> lock(processorMutex_);
+    if (index < processors_.size()) {
+        return processors_[index];
+    }
+    return nullptr;
+}
+
+void AudioEngine::setProcessorBypassed(size_t index, bool bypassed) {
+    auto processor = getProcessor(index);
+    if (processor) {
+        processor->setBypassed(bypassed);
+        std::cout << "Processor " << index << " (" << processor->getName() 
+                  << ") " << (bypassed ? "bypassed" : "enabled") << std::endl;
+    }
+}
+
+void AudioEngine::preallocateBuffers(int maxBufferSize) {
+    maxPreallocatedBufferSize_ = maxBufferSize;
+    
+    // Preallocate internal buffers
+    for (auto& buffer : internalBuffers_) {
+        buffer.reserve(maxBufferSize);
+        buffer.resize(maxBufferSize, 0.0f);
+    }
+    
+    // Preallocate input buffers
+    for (auto& buffer : inputBuffers_) {
+        buffer.reserve(maxBufferSize);
+        buffer.resize(maxBufferSize, 0.0f);
+    }
+    
+    std::cout << "Buffers preallocated for max size: " << maxBufferSize << " samples" << std::endl;
 }
 
 } // namespace OmegaDAW
