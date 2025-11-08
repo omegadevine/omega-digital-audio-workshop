@@ -293,6 +293,14 @@ void Mixer::setSoloMode(bool enabled) {
     soloMode_ = enabled;
 }
 
+std::shared_ptr<MixerBus> Mixer::getChannel(int index) {
+    auto ids = getBusIds();
+    if (index >= 0 && index < static_cast<int>(ids.size())) {
+        return getBus(ids[index]);
+    }
+    return nullptr;
+}
+
 std::vector<int> Mixer::getBusIds() const {
     std::vector<int> ids;
     for (const auto& pair : buses_) {

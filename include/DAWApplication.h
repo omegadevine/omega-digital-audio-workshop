@@ -17,9 +17,6 @@
 
 namespace OmegaDAW {
 
-// Forward declarations
-class MIDIDevice;
-
 class DAWApplication {
 public:
     DAWApplication();
@@ -34,7 +31,6 @@ public:
     
     // Component Access
     AudioEngine* getAudioEngine() { return audioEngine.get(); }
-    MIDIDevice* getMIDIDevice() { return midiDevice.get(); }
     MIDISequencer* getMIDISequencer() { return midiSequencer.get(); }
     PluginHost* getPluginHost() { return pluginHost.get(); }
     Mixer* getMixer() { return mixer.get(); }
@@ -68,7 +64,6 @@ private:
     void processEvents();
     
     std::unique_ptr<AudioEngine> audioEngine;
-    std::unique_ptr<MIDIDevice> midiDevice;
     std::unique_ptr<MIDISequencer> midiSequencer;
     std::unique_ptr<PluginHost> pluginHost;
     std::unique_ptr<Mixer> mixer;

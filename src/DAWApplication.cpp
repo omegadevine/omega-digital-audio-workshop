@@ -22,17 +22,20 @@ bool DAWApplication::initialize(int sampleRate, int bufferSize) {
     try {
         // Create all components
         audioEngine = std::make_unique<AudioEngine>();
-        midiDevice = std::make_unique<MIDIDevice>();
         midiSequencer = std::make_unique<MIDISequencer>();
         pluginHost = std::make_unique<PluginHost>();
         mixer = std::make_unique<Mixer>();
         router = std::make_unique<Router>();
-        sequencer = std::make_unique<Sequencer>();
         arrangement = std::make_unique<Arrangement>();
         transport = std::make_unique<Transport>();
         project = std::make_unique<Project>();
         fileIO = &FileManager::getInstance();
-        uiWindow = std::make_unique<UIWindow>();
+        
+        // Sequencer needs AudioEngine reference
+        sequencer = std::make_unique<Sequencer>(*audioEngine);
+        
+        // UIWindow needs title and dimensions
+        uiWindow = std::make_unique<UIWindow>("Omega DAW", 1280, 720);
         
         // Initialize components
         if (!audioEngine->initialize(sampleRate, bufferSize, 2)) {
@@ -253,8 +256,8 @@ bool DAWApplication::saveProject(const std::string& filepath) {
     projectData += "name:" + project->getName() + "\n";
     if (transport) {
         projectData += "tempo:" + std::to_string(transport->getTempo()) + "\n";
-        projectData += "timesig:" + std::to_string(transport->getTimeSignature().first) + 
-                      "/" + std::to_string(transport->getTimeSignature().second) + "\n";
+        projectData += "timesig:" + std::to_string(transport->getTimeSignatureNumerator()) + 
+                      "/" + std::to_string(transport->getTimeSignatureDenominator()) + "\n";
     }
     projectData += "samplerate:" + std::to_string(project->getSampleRate()) + "\n";
     projectData += "buffersize:" + std::to_string(project->getBufferSize()) + "\n";

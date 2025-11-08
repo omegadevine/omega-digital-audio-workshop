@@ -105,8 +105,9 @@ void Arrangement::splitClip(size_t trackIndex, size_t clipIndex, double splitTim
         auto newMidiClip = std::make_shared<MIDIClip>(secondStart, secondDuration);
         auto notes = midiClip->getNotesInRange(splitTime, originalClip->getEndTime());
         for (auto& note : notes) {
-            note.timestamp -= firstDuration;
-            newMidiClip->addNote(note);
+            MIDIMessage newNote = note;
+            newNote.setTimestamp(note.getTimestamp() - firstDuration);
+            newMidiClip->addNote(newNote);
         }
         newClip = newMidiClip;
     }

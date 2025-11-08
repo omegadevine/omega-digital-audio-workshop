@@ -13,6 +13,9 @@ find_package(SDL2_ttf CONFIG REQUIRED)
 # Find PortAudio
 find_package(portaudio CONFIG REQUIRED)
 
+# Add nlohmann/json header-only library
+add_subdirectory(external/json)
+
 # Output directories
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
@@ -79,6 +82,7 @@ add_executable(OmegaDAW_GUI
 target_link_libraries(OmegaDAW_GUI 
     PRIVATE 
     portaudio
+    nlohmann_json::nlohmann_json
     $<TARGET_NAME_IF_EXISTS:SDL2::SDL2main>
     $<IF:$<TARGET_EXISTS:SDL2::SDL2>,SDL2::SDL2,SDL2::SDL2-static>
     $<IF:$<TARGET_EXISTS:SDL2_ttf::SDL2_ttf>,SDL2_ttf::SDL2_ttf,SDL2_ttf::SDL2_ttf-static>

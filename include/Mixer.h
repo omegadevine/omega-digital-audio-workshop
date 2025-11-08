@@ -7,6 +7,7 @@
 #include <vector>
 #include <map>
 #include <string>
+#include <functional>
 
 namespace OmegaDAW {
 
@@ -93,6 +94,10 @@ public:
     AudioBuffer getMasterOutput();
 
     int getMasterBusId() const { return masterBusId_; }
+    
+    // Channel access methods
+    int getNumChannels() const { return static_cast<int>(buses_.size()); }
+    std::shared_ptr<MixerBus> getChannel(int index);
 
     void setSoloMode(bool enabled);
     bool isSoloMode() const { return soloMode_; }

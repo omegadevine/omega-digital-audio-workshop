@@ -59,5 +59,6 @@ plugins/*.vst3
 # Dependencies (if not using submodules)
 third_party/*/
 vendor/*/
+external/
 !third_party/README.md
 !vendor/README.md

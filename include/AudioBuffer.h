@@ -13,6 +13,7 @@ public:
     ~AudioBuffer() = default;
 
     void resize(int numSamples);
+    void setSize(int numChannels, int numSamples);
     void clear();
     
     float* getChannelData(int channel);

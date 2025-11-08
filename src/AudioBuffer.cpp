@@ -20,6 +20,15 @@ void AudioBuffer::resize(int numSamples) {
     }
 }
 
+void AudioBuffer::setSize(int numChannels, int numSamples) {
+    numChannels_ = numChannels;
+    numSamples_ = numSamples;
+    channelData_.resize(numChannels_);
+    for (auto& channel : channelData_) {
+        channel.resize(numSamples_, 0.0f);
+    }
+}
+
 void AudioBuffer::clear() {
     for (auto& channel : channelData_) {
         std::fill(channel.begin(), channel.end(), 0.0f);

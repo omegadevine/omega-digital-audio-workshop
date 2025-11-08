@@ -478,7 +478,16 @@ std::string FileManager::getFileExtension(const std::string& filepath) {
 
 FileFormat FileManager::getFileFormat(const std::string& filepath) {
     AudioFileReader reader;
-    return reader.detectFormat(filepath);
+    std::string ext = getFileExtension(filepath);
+    
+    // Simple detection based on extension
+    if (ext == "wav") return FileFormat::WAV;
+    if (ext == "mp3") return FileFormat::MP3;
+    if (ext == "ogg") return FileFormat::OGG;
+    if (ext == "flac") return FileFormat::FLAC;
+    if (ext == "aiff" || ext == "aif") return FileFormat::AIFF;
+    
+    return FileFormat::UNKNOWN;
 }
 
 bool FileManager::fileExists(const std::string& filepath) {

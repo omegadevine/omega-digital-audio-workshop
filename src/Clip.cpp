@@ -121,8 +121,8 @@ void MIDIClip::transpose(int semitones) {
 
 void MIDIClip::setVelocity(uint8_t velocity) {
     for (auto& note : m_notes) {
-        if (note.type == MIDIMessageType::NoteOn) {
-            note.data2 = velocity;
+        if (note.getType() == static_cast<uint8_t>(MIDIMessageType::NoteOn)) {
+            note = MIDIMessage(note.getStatus(), note.getData1(), velocity);
         }
     }
 }
