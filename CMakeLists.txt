@@ -6,6 +6,12 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
+# Find PortAudio
+find_package(PkgConfig)
+if(PkgConfig_FOUND)
+    pkg_check_modules(PORTAUDIO portaudio-2.0)
+endif()
+
 # Output directories
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
@@ -19,6 +25,7 @@ option(BUILD_EXAMPLES "Build example applications" OFF)
 include_directories(
     ${CMAKE_SOURCE_DIR}/include
     ${CMAKE_SOURCE_DIR}/src
+    ${PORTAUDIO_INCLUDE_DIRS}
 )
 
 # Source files
@@ -38,6 +45,12 @@ add_executable(OmegaDAW
     ${HEADERS}
 )
 
+# Link PortAudio
+if(PORTAUDIO_FOUND)
+    target_link_libraries(OmegaDAW ${PORTAUDIO_LIBRARIES})
+    target_include_directories(OmegaDAW PRIVATE ${PORTAUDIO_INCLUDE_DIRS})
+endif()
+
 # Platform-specific settings
 if(WIN32)
     target_compile_definitions(OmegaDAW PRIVATE OMEGA_PLATFORM_WINDOWS)
@@ -48,6 +61,10 @@ if(WIN32)
         ole32
         oleaut32
     )
+    # If PortAudio not found via pkg-config, try manual link
+    if(NOT PORTAUDIO_FOUND)
+        target_link_libraries(OmegaDAW portaudio)
+    endif()
 elseif(UNIX AND NOT APPLE)
     target_compile_definitions(OmegaDAW PRIVATE OMEGA_PLATFORM_LINUX)
     target_link_libraries(OmegaDAW 

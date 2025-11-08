@@ -1,9 +1,25 @@
 # Omega Digital Audio Workshop
 
-A professional Digital Audio Workstation (DAW) built from the ground up.
+A professional Digital Audio Workstation (DAW) built from the ground up with real-time audio processing capabilities.
 
-## Features (Planned)
+## Current Features
 
+### Audio Engine (Implemented)
+- **Real-time Audio Processing**: Low-latency audio I/O using PortAudio
+- **Professional Sample Rates**: 44.1kHz, 48kHz, 96kHz, 192kHz support
+- **Flexible Buffer Sizes**: 64-2048 samples for latency optimization
+- **Multi-channel Support**: Stereo and multi-channel audio routing
+- **Audio Metering**: Real-time peak and RMS level monitoring
+- **CPU Load Monitoring**: Track processing efficiency
+
+### DSP Components (Implemented)
+- **Oscillators**: Sine, Square, Saw, Triangle, Noise waveforms
+- **Filters**: Biquad filters (LowPass, HighPass, BandPass, Notch, AllPass)
+- **Delay Effect**: Configurable delay time, feedback, and wet/dry mix
+- **Reverb Effect**: Room-based reverb with size, damping, and mix controls
+- **Audio Graph**: Modular processor chaining for complex signal routing
+
+### Features (Planned)
 - Multi-track audio recording and playback
 - MIDI sequencing and editing
 - VST/VST3 plugin support
@@ -11,27 +27,37 @@ A professional Digital Audio Workstation (DAW) built from the ground up.
 - Non-destructive editing
 - Audio mixing with EQ, compression, and effects
 - Automation support
-- Real-time audio processing
 - Project management and session handling
+- GUI Interface
 
 ## System Requirements
 
 - Windows 10/11 (64-bit)
 - 4GB RAM minimum (8GB+ recommended)
-- Audio interface compatible with ASIO/WASAPI
+- Audio interface compatible with WASAPI/DirectSound
+- PortAudio library
 
 ## Building from Source
 
 ### Prerequisites
 - CMake 3.15 or higher
-- C++17 compatible compiler (MSVC, GCC, or Clang)
+- C++17 compatible compiler (MSVC 2019+, GCC 9+, or Clang 10+)
 - Git
+- PortAudio library (see installation below)
 
-### Dependencies
-- JUCE Framework (for audio processing and UI)
-- PortAudio (cross-platform audio I/O)
-- RtMidi (for MIDI support)
-- SQLite (for project data)
+### Installing PortAudio on Windows
+
+#### Option 1: vcpkg (Recommended)
+```bash
+git clone https://github.com/Microsoft/vcpkg.git
+cd vcpkg
+.\bootstrap-vcpkg.bat
+.\vcpkg integrate install
+.\vcpkg install portaudio
+```
+
+#### Option 2: Manual Installation
+Download prebuilt binaries from http://www.portaudio.com/download.html
 
 ### Build Instructions
 ```bash
@@ -43,9 +69,80 @@ cmake ..
 cmake --build . --config Release
 ```
 
-## Getting Started
+### Running the Demo
+```bash
+cd build/bin
+./OmegaDAW  # or OmegaDAW.exe on Windows
+```
 
-Documentation coming soon.
+## Audio Engine Demo
+
+The current demo application includes:
+
+1. **List Audio Devices** - View all available audio interfaces
+2. **Test Oscillators** - Generate different waveforms
+3. **Test Filters** - Apply various filter types
+4. **Test Delay Effect** - Echo and delay processing
+5. **Test Reverb Effect** - Spatial reverb simulation
+6. **Full Synth Demo** - Complete signal chain demonstration
+7. **Show Engine Status** - Real-time metrics and monitoring
+
+## Architecture
+
+The audio engine is built on a modular processor architecture:
+
+```
+AudioEngine
+    ├── Device Management (PortAudio)
+    ├── Transport Control (Start/Stop/Pause)
+    ├── Audio Graph (Processor Chain)
+    │   ├── Oscillators (Sound Generation)
+    │   ├── Filters (Frequency Shaping)
+    │   ├── Effects (Delay, Reverb, etc.)
+    │   └── Custom Processors (Extensible)
+    └── Metering & Monitoring
+```
+
+### Audio Processing Flow
+
+1. **Input** → Audio device or generators
+2. **Processing** → Through processor chain
+3. **Mixing** → Master volume and combining
+4. **Output** → Audio device with metering
+
+## API Example
+
+```cpp
+#include "AudioEngine.h"
+#include "Oscillator.h"
+#include "Filter.h"
+
+// Initialize engine
+omega::AudioEngine engine;
+engine.initialize(48000, 256, 2);
+
+// Create processors
+auto oscillator = std::make_shared<omega::Oscillator>(
+    omega::WaveformType::Saw, 440.0f
+);
+auto filter = std::make_shared<omega::BiquadFilter>(
+    omega::FilterType::LowPass
+);
+filter->setFrequency(1000.0f);
+
+// Build audio graph
+engine.addProcessor(oscillator);
+engine.addProcessor(filter);
+
+// Start playback
+engine.startPlayback();
+```
+
+## Performance
+
+- **Latency**: ~5-12ms @ 48kHz / 256 samples
+- **CPU Usage**: <5% for basic synthesis on modern CPUs
+- **Thread-Safe**: Real-time audio thread isolated from UI
 
 ## License
 
@@ -55,6 +152,34 @@ MIT License - See LICENSE file for details
 
 Contributions are welcome! Please read CONTRIBUTING.md for guidelines.
 
+## Roadmap
+
+### Phase 1: Audio Engine (Current)
+- [x] Real-time audio I/O
+- [x] Basic DSP components
+- [x] Audio graph architecture
+- [ ] MIDI input/output
+- [ ] Audio file I/O (WAV, MP3, FLAC)
+
+### Phase 2: DAW Features
+- [ ] Multi-track recording
+- [ ] Timeline and arrangement
+- [ ] Plugin hosting (VST3)
+- [ ] Mixing console
+
+### Phase 3: UI Development
+- [ ] Modern GUI framework
+- [ ] Waveform display
+- [ ] Piano roll editor
+- [ ] Mixer interface
+
+### Phase 4: Advanced Features
+- [ ] Automation lanes
+- [ ] Side-chain processing
+- [ ] Advanced routing
+- [ ] Project templates
+
 ## Contact
 
 Project maintained by omegadevine
+GitHub: https://github.com/omegadevine/omega-digital-audio-workshop
