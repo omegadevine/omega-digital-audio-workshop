@@ -1,5 +1,7 @@
 #include "DAWGUI.h"
+#include "Clip.h"
 #include <iostream>
+#include <cstdlib>
 
 namespace OmegaDAW {
 
@@ -269,21 +271,79 @@ void DAWGUI::renderMixerPanel() {
     
     drawText("MIXER", windowWidth - 200, 40, colors.accent);
     
-    // Draw channel strips
-    for (size_t i = 0; i < channelFaders.size(); ++i) {
-        // Update meter levels (simulate)
-        if (daw && daw->isPlaying()) {
-            channelMeters[i].level = 0.3f + (rand() % 40) / 100.0f;
-            channelMeters[i].peak = std::max(channelMeters[i].peak, channelMeters[i].level);
-        } else {
-            channelMeters[i].level *= 0.95f;
-            channelMeters[i].peak *= 0.98f;
-        }
+    // Draw track channel strips
+    if (daw && daw->getProject()) {
+        int numTracks = std::min(4, daw->getProject()->getNumTracks()); // Show max 4 tracks
         
-        drawMeter(channelMeters[i]);
-        drawFader(channelFaders[i]);
-        drawText(channelFaders[i].label, channelFaders[i].rect.x - 5, 
-                channelFaders[i].rect.y + channelFaders[i].rect.h + 5, colors.text);
+        for (int i = 0; i < numTracks; ++i) {
+            auto track = daw->getProject()->getTrack(i);
+            if (!track) continue;
+            
+            int channelX = windowWidth - 200 + i * 50;
+            int channelY = 70;
+            
+            // Update fader from track volume
+            if (i < static_cast<int>(channelFaders.size())) {
+                channelFaders[i].value = track->getVolume();
+                channelFaders[i].label = track->getName();
+                channelFaders[i].rect.x = channelX;
+                channelFaders[i].rect.y = channelY;
+            }
+            
+            // Update meter levels from playback
+            if (i < static_cast<int>(channelMeters.size())) {
+                if (daw && daw->isPlaying() && !track->isMuted()) {
+                    channelMeters[i].level = 0.3f + (rand() % 40) / 100.0f;
+                    channelMeters[i].peak = std::max(channelMeters[i].peak, channelMeters[i].level);
+                } else {
+                    channelMeters[i].level *= 0.95f;
+                    channelMeters[i].peak *= 0.98f;
+                }
+                
+                channelMeters[i].rect.x = channelX + 5;
+                channelMeters[i].rect.y = channelY - 120;
+                
+                drawMeter(channelMeters[i]);
+            }
+            
+            // Draw fader
+            if (i < static_cast<int>(channelFaders.size())) {
+                drawFader(channelFaders[i]);
+                
+                // Draw track name below fader
+                std::string trackName = track->getName();
+                if (trackName.length() > 6) trackName = trackName.substr(0, 6);
+                drawText(trackName, channelX - 5, channelY + 105, colors.text);
+                
+                // Draw mute/solo indicators
+                if (track->isMuted()) {
+                    SDL_Rect muteRect = {channelX + 2, channelY + 120, 15, 12};
+                    drawRect(muteRect, {255, 100, 100, 255});
+                    drawText("M", channelX + 4, channelY + 121, {0, 0, 0, 255});
+                }
+                if (track->isSoloed()) {
+                    SDL_Rect soloRect = {channelX + 20, channelY + 120, 15, 12};
+                    drawRect(soloRect, {255, 255, 100, 255});
+                    drawText("S", channelX + 22, channelY + 121, {0, 0, 0, 255});
+                }
+            }
+        }
+    } else {
+        // Fallback to original behavior for channel faders
+        for (size_t i = 0; i < channelFaders.size(); ++i) {
+            if (daw && daw->isPlaying()) {
+                channelMeters[i].level = 0.3f + (rand() % 40) / 100.0f;
+                channelMeters[i].peak = std::max(channelMeters[i].peak, channelMeters[i].level);
+            } else {
+                channelMeters[i].level *= 0.95f;
+                channelMeters[i].peak *= 0.98f;
+            }
+            
+            drawMeter(channelMeters[i]);
+            drawFader(channelFaders[i]);
+            drawText(channelFaders[i].label, channelFaders[i].rect.x - 5, 
+                    channelFaders[i].rect.y + channelFaders[i].rect.h + 5, colors.text);
+        }
     }
 }
 
@@ -294,35 +354,128 @@ void DAWGUI::renderTimelinePanel() {
     
     drawText("TIMELINE / ARRANGEMENT", 20, 40, colors.accent);
     
-    // Draw timeline grid
-    int gridSpacing = 50;
+    // Calculate visible time range
+    const double pixelsPerSecond = 50.0; // 50 pixels = 1 second
+    const int timelineWidth = windowWidth - 220;
+    const int timelineStartX = 20;
+    const int timelineStartY = 80;
+    const int trackHeight = 60;
+    const int trackSpacing = 10;
+    
+    // Draw timeline ruler
     SDL_SetRenderDrawColor(renderer, colors.border.r, colors.border.g, 
                           colors.border.b, colors.border.a);
+    SDL_RenderDrawLine(renderer, 0, timelineStartY - 5, timelineWidth, timelineStartY - 5);
     
-    for (int x = 0; x < windowWidth - 220; x += gridSpacing) {
-        SDL_RenderDrawLine(renderer, x, 60, x, windowHeight - 110);
-    }
-    
-    for (int y = 60; y < windowHeight - 110; y += gridSpacing) {
-        SDL_RenderDrawLine(renderer, 0, y, windowWidth - 220, y);
+    // Draw time markers
+    for (int sec = 0; sec < 30; ++sec) {
+        int x = timelineStartX + (int)(sec * pixelsPerSecond);
+        if (x > timelineWidth - 50) break;
+        
+        SDL_RenderDrawLine(renderer, x, timelineStartY - 10, x, timelineStartY - 5);
+        drawText(std::to_string(sec) + "s", x - 10, timelineStartY - 25, colors.text);
     }
     
     // Draw playhead
     if (daw && daw->getTransport()) {
         double pos = daw->getTransport()->getPosition();
-        int playheadX = 20 + (int)(pos * 20.0) % (windowWidth - 240);
+        int playheadX = timelineStartX + (int)(pos * pixelsPerSecond);
         SDL_SetRenderDrawColor(renderer, colors.accent.r, colors.accent.g, 
                               colors.accent.b, colors.accent.a);
-        SDL_RenderDrawLine(renderer, playheadX, 60, playheadX, windowHeight - 110);
+        SDL_RenderDrawLine(renderer, playheadX, timelineStartY - 10, playheadX, windowHeight - 110);
     }
     
-    // Draw some example tracks/clips
-    SDL_Rect clip1 = {50, 100, 150, 40};
-    SDL_Rect clip2 = {220, 150, 200, 40};
-    drawRect(clip1, colors.button);
-    drawRect(clip2, colors.button);
-    drawText("Audio Clip 1", 55, 115, colors.text);
-    drawText("MIDI Clip 1", 225, 165, colors.text);
+    // Draw tracks and clips
+    if (daw && daw->getProject()) {
+        int numTracks = daw->getProject()->getNumTracks();
+        
+        for (int trackIdx = 0; trackIdx < numTracks; ++trackIdx) {
+            auto track = daw->getProject()->getTrack(trackIdx);
+            if (!track) continue;
+            
+            int trackY = timelineStartY + trackIdx * (trackHeight + trackSpacing);
+            
+            // Draw track background
+            SDL_Rect trackRect = {0, trackY, timelineWidth, trackHeight};
+            SDL_Color trackBg = {35, 35, 40, 255};
+            drawRect(trackRect, trackBg);
+            drawRect(trackRect, colors.border, false);
+            
+            // Draw track label
+            drawText(track->getName(), 5, trackY + 5, colors.accent);
+            
+            // Draw clips on this track
+            const auto& clips = track->getClips();
+            for (const auto& clip : clips) {
+                if (!clip) continue;
+                
+                // Calculate clip position and size
+                int clipX = timelineStartX + (int)(clip->getStartTime() * pixelsPerSecond);
+                int clipWidth = (int)(clip->getDuration() * pixelsPerSecond);
+                int clipY = trackY + 20;
+                int clipHeight = trackHeight - 25;
+                
+                SDL_Rect clipRect = {clipX, clipY, clipWidth, clipHeight};
+                
+                // Choose color based on clip type
+                SDL_Color clipColor;
+                unsigned int color = clip->getColor();
+                clipColor.r = (color >> 16) & 0xFF;
+                clipColor.g = (color >> 8) & 0xFF;
+                clipColor.b = color & 0xFF;
+                clipColor.a = 255;
+                
+                // Draw clip background
+                drawRect(clipRect, clipColor);
+                
+                // Draw clip border
+                SDL_Color borderColor = {
+                    static_cast<Uint8>(clipColor.r * 0.6),
+                    static_cast<Uint8>(clipColor.g * 0.6),
+                    static_cast<Uint8>(clipColor.b * 0.6),
+                    255
+                };
+                drawRect(clipRect, borderColor, false);
+                
+                // Draw clip name (if it fits)
+                if (clipWidth > 40) {
+                    drawText(clip->getName(), clipX + 5, clipY + 5, colors.text);
+                }
+                
+                // Draw waveform or MIDI notes indicator
+                if (clip->getType() == ClipType::Audio) {
+                    // Draw simple waveform placeholder
+                    SDL_SetRenderDrawColor(renderer, 100, 255, 100, 100);
+                    for (int i = 0; i < clipWidth - 4; i += 4) {
+                        int waveHeight = (rand() % (clipHeight - 10)) / 2;
+                        int midY = clipY + clipHeight / 2;
+                        SDL_RenderDrawLine(renderer, clipX + 2 + i, midY - waveHeight, 
+                                         clipX + 2 + i, midY + waveHeight);
+                    }
+                } else if (clip->getType() == ClipType::MIDI) {
+                    // Draw MIDI note indicators
+                    auto midiClip = std::static_pointer_cast<MIDIClip>(clip);
+                    const auto& notes = midiClip->getNotes();
+                    
+                    for (const auto& note : notes) {
+                        if (note.isNoteOn()) {
+                            double noteTime = note.getTimestamp();
+                            int noteX = clipX + (int)((noteTime - clip->getOffset()) * pixelsPerSecond);
+                            int noteY = clipY + 2 + ((127 - note.getNoteNumber()) * (clipHeight - 4)) / 128;
+                            
+                            SDL_Rect noteRect = {noteX, noteY, 3, 3};
+                            SDL_SetRenderDrawColor(renderer, 255, 255, 100, 255);
+                            SDL_RenderFillRect(renderer, &noteRect);
+                        }
+                    }
+                }
+            }
+        }
+    } else {
+        // Show message when no project
+        drawText("No project loaded. Create a new project to begin.", 
+                 timelineStartX, timelineStartY + 50, colors.text);
+    }
 }
 
 void DAWGUI::renderStatusBar() {
