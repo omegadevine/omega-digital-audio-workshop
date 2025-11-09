@@ -10,6 +10,11 @@ DAWGUI::DAWGUI(DAWApplication* app)
       quit(false), windowWidth(0), windowHeight(0),
       mouseX(0), mouseY(0),
       showingFileDialog(false), fileDialogMode(""), fileDialogPath("") {
+    clipDrag.dragging = false;
+    clipDrag.trackIndex = -1;
+    clipDrag.clipIndex = -1;
+    clipDrag.startX = 0;
+    clipDrag.startTime = 0;
 }
 
 DAWGUI::~DAWGUI() {
@@ -628,6 +633,53 @@ void DAWGUI::handleMouseDown(int x, int y) {
     // Close menus if clicking elsewhere
     closeAllMenus();
     
+    // Check for clip clicks in timeline
+    if (daw && daw->getProject() && y > 80 && y < windowHeight - 110) {
+        const double pixelsPerSecond = 50.0;
+        const int timelineStartX = 20;
+        const int timelineStartY = 80;
+        const int trackHeight = 60;
+        const int trackSpacing = 10;
+        
+        int numTracks = daw->getProject()->getNumTracks();
+        for (int trackIdx = 0; trackIdx < numTracks; ++trackIdx) {
+            auto track = daw->getProject()->getTrack(trackIdx);
+            if (!track) continue;
+            
+            int trackY = timelineStartY + trackIdx * (trackHeight + trackSpacing);
+            
+            // Check if click is within this track's vertical range
+            if (y >= trackY + 20 && y <= trackY + trackHeight - 5) {
+                const auto& clips = track->getClips();
+                
+                // Check each clip (in reverse order to prioritize top clips)
+                for (int clipIdx = (int)clips.size() - 1; clipIdx >= 0; --clipIdx) {
+                    auto clip = clips[clipIdx];
+                    if (!clip) continue;
+                    
+                    int clipX = timelineStartX + (int)(clip->getStartTime() * pixelsPerSecond);
+                    int clipWidth = (int)(clip->getDuration() * pixelsPerSecond);
+                    int clipY = trackY + 20;
+                    int clipHeight = trackHeight - 25;
+                    
+                    SDL_Rect clipRect = {clipX, clipY, clipWidth, clipHeight};
+                    
+                    if (isPointInRect(x, y, clipRect)) {
+                        // Start dragging this clip
+                        clipDrag.dragging = true;
+                        clipDrag.trackIndex = trackIdx;
+                        clipDrag.clipIndex = clipIdx;
+                        clipDrag.startX = x;
+                        clipDrag.startTime = clip->getStartTime();
+                        std::cout << "Started dragging clip: " << clip->getName() 
+                                  << " on track " << trackIdx << std::endl;
+                        return;
+                    }
+                }
+            }
+        }
+    }
+    
     // Check transport buttons
     if (isPointInRect(x, y, playButton.rect)) {
         playButton.pressed = true;
@@ -654,6 +706,14 @@ void DAWGUI::handleMouseDown(int x, int y) {
 }
 
 void DAWGUI::handleMouseUp(int x, int y) {
+    // Stop clip dragging
+    if (clipDrag.dragging) {
+        std::cout << "Finished dragging clip" << std::endl;
+        clipDrag.dragging = false;
+        clipDrag.trackIndex = -1;
+        clipDrag.clipIndex = -1;
+    }
+    
     playButton.pressed = false;
     stopButton.pressed = false;
     recordButton.pressed = false;
@@ -665,6 +725,25 @@ void DAWGUI::handleMouseUp(int x, int y) {
 }
 
 void DAWGUI::handleMouseMove(int x, int y) {
+    // Handle clip dragging
+    if (clipDrag.dragging && daw && daw->getProject()) {
+        const double pixelsPerSecond = 50.0;
+        double deltaX = x - clipDrag.startX;
+        double deltaTime = deltaX / pixelsPerSecond;
+        double newTime = std::max(0.0, clipDrag.startTime + deltaTime);
+        
+        auto track = daw->getProject()->getTrack(clipDrag.trackIndex);
+        if (track) {
+            const auto& clips = track->getClips();
+            if (clipDrag.clipIndex >= 0 && clipDrag.clipIndex < (int)clips.size()) {
+                auto clip = clips[clipDrag.clipIndex];
+                if (clip) {
+                    clip->setStartTime(newTime);
+                }
+            }
+        }
+    }
+    
     // Update menu hover states
     for (auto& menu : menus) {
         menu.hovered = isPointInRect(x, y, menu.rect);

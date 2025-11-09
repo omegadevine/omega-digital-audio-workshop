@@ -130,6 +130,15 @@ private:
     std::string fileDialogMode; // "save", "saveas", "open"
     std::string fileDialogPath;
     
+    // Clip interaction state
+    struct {
+        bool dragging;
+        int trackIndex;
+        int clipIndex;
+        double startX;
+        double startTime;
+    } clipDrag;
+    
     // State
     bool quit;
     int windowWidth;
