@@ -218,10 +218,28 @@ bool DAWApplication::newProject(const std::string& projectName) {
     mixer->reset();
     transport->reset();
     
+    // Create default tracks
+    auto audioTrack1 = std::make_shared<Track>("Audio 1", TrackType::Audio);
+    audioTrack1->setTrackIndex(0);
+    project->addTrack(audioTrack1);
+    
+    auto audioTrack2 = std::make_shared<Track>("Audio 2", TrackType::Audio);
+    audioTrack2->setTrackIndex(1);
+    project->addTrack(audioTrack2);
+    
+    auto audioTrack3 = std::make_shared<Track>("Audio 3", TrackType::Audio);
+    audioTrack3->setTrackIndex(2);
+    project->addTrack(audioTrack3);
+    
+    auto midiTrack = std::make_shared<Track>("MIDI 1", TrackType::MIDI);
+    midiTrack->setTrackIndex(3);
+    project->addTrack(midiTrack);
+    
     // Create demo clips for visualization
     project->createDemoClips();
     
     std::cout << "New project created: " << projectName << std::endl;
+    std::cout << "  - Created " << project->getNumTracks() << " tracks" << std::endl;
     return true;
 }
 
