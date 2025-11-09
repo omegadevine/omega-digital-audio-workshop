@@ -300,14 +300,19 @@ bool DAWApplication::saveProject(const std::string& filepath) {
 
 void DAWApplication::play() {
     transport->play();
+    audioEngine->startPlayback();
+    std::cout << "Playback started" << std::endl;
 }
 
 void DAWApplication::stop() {
     transport->stop();
+    audioEngine->stopPlayback();
+    std::cout << "Playback stopped" << std::endl;
 }
 
 void DAWApplication::pause() {
     transport->pause();
+    audioEngine->pausePlayback();
 }
 
 void DAWApplication::record() {
