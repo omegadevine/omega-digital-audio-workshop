@@ -35,6 +35,43 @@ bool Project::save(const std::string& filepath) {
             trackJson["solo"] = track->isSoloed();
             trackJson["volume"] = track->getVolume();
             trackJson["pan"] = track->getPan();
+            
+            // Save clips
+            json clipsArray = json::array();
+            for (const auto& clip : track->getClips()) {
+                json clipJson;
+                clipJson["type"] = static_cast<int>(clip->getType());
+                clipJson["startTime"] = clip->getStartTime();
+                clipJson["duration"] = clip->getDuration();
+                clipJson["offset"] = clip->getOffset();
+                clipJson["loop"] = clip->isLooping();
+                clipJson["gain"] = clip->getGain();
+                clipJson["name"] = clip->getName();
+                clipJson["color"] = clip->getColor();
+                
+                if (clip->getType() == ClipType::Audio) {
+                    auto audioClip = std::static_pointer_cast<AudioClip>(clip);
+                    clipJson["sourceFile"] = audioClip->getSourceFile();
+                    clipJson["pitch"] = audioClip->getPitch();
+                    clipJson["reverse"] = audioClip->isReversed();
+                } else if (clip->getType() == ClipType::MIDI) {
+                    auto midiClip = std::static_pointer_cast<MIDIClip>(clip);
+                    json notesArray = json::array();
+                    for (const auto& note : midiClip->getNotes()) {
+                        json noteJson;
+                        noteJson["status"] = note.getStatus();
+                        noteJson["data1"] = note.getData1();
+                        noteJson["data2"] = note.getData2();
+                        noteJson["timestamp"] = note.getTimestamp();
+                        notesArray.push_back(noteJson);
+                    }
+                    clipJson["notes"] = notesArray;
+                }
+                
+                clipsArray.push_back(clipJson);
+            }
+            trackJson["clips"] = clipsArray;
+            
             tracksArray.push_back(trackJson);
         }
         projectJson["tracks"] = tracksArray;
@@ -102,6 +139,53 @@ bool Project::load(const std::string& filepath) {
                 track->setSolo(trackJson.value("solo", false));
                 track->setVolume(trackJson.value("volume", 1.0f));
                 track->setPan(trackJson.value("pan", 0.0f));
+                
+                // Load clips
+                if (trackJson.contains("clips")) {
+                    for (const auto& clipJson : trackJson["clips"]) {
+                        ClipType type = static_cast<ClipType>(clipJson.value("type", 0));
+                        double startTime = clipJson.value("startTime", 0.0);
+                        double duration = clipJson.value("duration", 1.0);
+                        
+                        std::shared_ptr<Clip> clip;
+                        
+                        if (type == ClipType::Audio) {
+                            auto audioClip = std::make_shared<AudioClip>(startTime, duration);
+                            audioClip->setSourceFile(clipJson.value("sourceFile", ""));
+                            audioClip->setPitch(clipJson.value("pitch", 0.0f));
+                            audioClip->setReverse(clipJson.value("reverse", false));
+                            clip = audioClip;
+                        } else if (type == ClipType::MIDI) {
+                            auto midiClip = std::make_shared<MIDIClip>(startTime, duration);
+                            
+                            if (clipJson.contains("notes")) {
+                                for (const auto& noteJson : clipJson["notes"]) {
+                                    MIDIMessage note(
+                                        noteJson.value("status", 0),
+                                        noteJson.value("data1", 0),
+                                        noteJson.value("data2", 0)
+                                    );
+                                    note.setTimestamp(noteJson.value("timestamp", 0.0));
+                                    midiClip->addNote(note);
+                                }
+                            }
+                            clip = midiClip;
+                        } else {
+                            clip = std::make_shared<Clip>(type, startTime, duration);
+                        }
+                        
+                        if (clip) {
+                            clip->setOffset(clipJson.value("offset", 0.0));
+                            clip->setLoop(clipJson.value("loop", false));
+                            clip->setGain(clipJson.value("gain", 1.0f));
+                            clip->setName(clipJson.value("name", "Clip"));
+                            clip->setColor(clipJson.value("color", 0xFFFFFFFF));
+                            
+                            track->addClip(clip);
+                        }
+                    }
+                }
+                
                 tracks_.push_back(track);
             }
         }
@@ -183,6 +267,51 @@ void Project::setArrangementData(const std::string& data) {
 void Project::setMixerData(const std::string& data) {
     mixerData_ = data;
     modified_ = true;
+}
+
+void Project::createDemoClips() {
+    // Create demo clips for visualization
+    for (auto& track : tracks_) {
+        if (track->getType() == TrackType::Audio) {
+            // Add a few demo audio clips
+            auto clip1 = std::make_shared<AudioClip>(0.0, 2.0);
+            clip1->setName("Audio Clip 1");
+            clip1->setColor(0xFF4444FF);
+            track->addClip(clip1);
+            
+            auto clip2 = std::make_shared<AudioClip>(3.0, 1.5);
+            clip2->setName("Audio Clip 2");
+            clip2->setColor(0xFF44FF44);
+            track->addClip(clip2);
+            
+            auto clip3 = std::make_shared<AudioClip>(5.5, 3.0);
+            clip3->setName("Audio Clip 3");
+            clip3->setColor(0xFFFF4444);
+            track->addClip(clip3);
+        } else if (track->getType() == TrackType::MIDI) {
+            // Add a demo MIDI clip
+            auto midiClip = std::make_shared<MIDIClip>(0.0, 4.0);
+            midiClip->setName("MIDI Pattern");
+            midiClip->setColor(0xFFFFAA44);
+            
+            // Add some demo notes (C major scale)
+            std::vector<int> notes = {60, 62, 64, 65, 67, 69, 71, 72}; // C4 to C5
+            for (size_t i = 0; i < notes.size(); ++i) {
+                double time = i * 0.5; // Quarter note spacing
+                MIDIMessage noteOn(0x90, notes[i], 100); // Note on, velocity 100
+                noteOn.setTimestamp(time);
+                midiClip->addNote(noteOn);
+                
+                MIDIMessage noteOff(0x80, notes[i], 0); // Note off
+                noteOff.setTimestamp(time + 0.4); // Slightly shorter than spacing
+                midiClip->addNote(noteOff);
+            }
+            
+            track->addClip(midiClip);
+        }
+    }
+    
+    std::cout << "Demo clips created on all tracks" << std::endl;
 }
 
 } // namespace OmegaDAW

@@ -2,6 +2,7 @@
 #define OMEGA_DAW_TRACK_H
 
 #include "AudioBuffer.h"
+#include "Clip.h"
 #include <string>
 #include <vector>
 #include <memory>
@@ -20,6 +21,7 @@ public:
     ~Track() = default;
 
     void process(AudioBuffer& buffer, int numSamples);
+    void processAtTime(AudioBuffer& buffer, int numSamples, double currentTime, double sampleRate);
     
     void setVolume(float volume);
     float getVolume() const { return volume_; }
@@ -43,6 +45,14 @@ public:
     
     int getTrackIndex() const { return trackIndex_; }
     void setTrackIndex(int index) { trackIndex_ = index; }
+    
+    // Clip management
+    void addClip(std::shared_ptr<Clip> clip);
+    void removeClip(size_t index);
+    void clearClips();
+    const std::vector<std::shared_ptr<Clip>>& getClips() const { return clips_; }
+    std::vector<std::shared_ptr<Clip>> getClipsInRange(double startTime, double endTime) const;
+    std::shared_ptr<Clip> getClipAt(double time) const;
 
 private:
     std::string name_;
@@ -56,6 +66,7 @@ private:
     bool recordEnabled_;
     
     AudioBuffer trackBuffer_;
+    std::vector<std::shared_ptr<Clip>> clips_;
 };
 
 } // namespace OmegaDAW

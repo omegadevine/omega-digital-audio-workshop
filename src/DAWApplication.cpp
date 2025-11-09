@@ -218,6 +218,9 @@ bool DAWApplication::newProject(const std::string& projectName) {
     mixer->reset();
     transport->reset();
     
+    // Create demo clips for visualization
+    project->createDemoClips();
+    
     std::cout << "New project created: " << projectName << std::endl;
     return true;
 }

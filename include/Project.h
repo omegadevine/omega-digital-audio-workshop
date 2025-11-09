@@ -40,6 +40,9 @@ public:
     void setBufferSize(int bufferSize);
     int getBufferSize() const { return bufferSize_; }
     
+    // Helper methods
+    void createDemoClips();
+    
     // Integration methods
     void clear();
     void setArrangementData(const std::string& data);
