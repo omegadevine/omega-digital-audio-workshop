@@ -68,3 +68,19 @@ vendor/*/
 external/
 !third_party/README.md
 !vendor/README.md
+
+# Security - ignore sensitive files
+*.key
+*.pem
+*.crt
+*.p12
+*.pfx
+.env
+.env.*
+secrets.json
+credentials.json
+
+# Temporary security scan results
+trivy-results.*
+security-report.*
+*.sarif

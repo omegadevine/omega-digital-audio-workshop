@@ -1,0 +1,17 @@
+# Code owners - require review from these users for changes
+
+# Default owner for everything
+* @omegadevine
+
+# Critical security files
+SECURITY.md @omegadevine
+.github/workflows/ @omegadevine
+CMakeLists.txt @omegadevine
+
+# Core audio engine - requires careful review
+src/audio/ @omegadevine
+include/audio/ @omegadevine
+
+# Build configuration
+build/ @omegadevine
+cmake/ @omegadevine

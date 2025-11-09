@@ -1,0 +1,51 @@
+name: File Integrity Check
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  integrity-check:
+    runs-on: windows-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Verify critical files exist
+      shell: pwsh
+      run: |
+        $critical_files = @(
+          "CMakeLists.txt",
+          "SECURITY.md",
+          "README.md",
+          ".gitignore",
+          ".gitattributes"
+        )
+        
+        $missing = @()
+        foreach ($file in $critical_files) {
+          if (-not (Test-Path $file)) {
+            $missing += $file
+          }
+        }
+        
+        if ($missing.Count -gt 0) {
+          Write-Error "Missing critical files: $($missing -join ', ')"
+          exit 1
+        }
+        
+        Write-Host "All critical files present"
+    
+    - name: Check for suspicious changes
+      shell: pwsh
+      run: |
+        # Check for unexpected deletions
+        git diff --name-status HEAD~1..HEAD | Select-String "^D" | ForEach-Object {
+          $deleted = $_.ToString().Split("`t")[1]
+          if ($deleted -match "(build/|CMakeLists\.txt|\.github/)") {
+            Write-Warning "Critical file deleted: $deleted"
+          }
+        }
