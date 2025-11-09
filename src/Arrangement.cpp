@@ -262,8 +262,17 @@ void Arrangement::shutdown() {
 }
 
 AudioBuffer Arrangement::renderAtPosition(double position) {
-    // Create empty buffer for now
-    AudioBuffer buffer;
+    // Get buffer size from first track or use default
+    int bufferSize = 512;
+    int sampleRate = 44100;
+    
+    // Create output buffer
+    AudioBuffer buffer(2, bufferSize);
+    buffer.clear();
+    
+    // This is a placeholder - the actual audio processing happens in Track::processAtTime()
+    // which is called from the Project during playback
+    
     return buffer;
 }
 

@@ -43,6 +43,9 @@ public:
     // Helper methods
     void createDemoClips();
     
+    // Audio processing
+    void processAudio(AudioBuffer& outputBuffer, double currentTime, double sampleRate);
+    
     // Integration methods
     void clear();
     void setArrangementData(const std::string& data);

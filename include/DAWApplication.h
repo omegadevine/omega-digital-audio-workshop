@@ -11,6 +11,7 @@
 #include "Arrangement.h"
 #include "Transport.h"
 #include "Project.h"
+#include "ProjectProcessor.h"
 #include "FileIO.h"
 #include "UIWindow.h"
 #include <memory>
@@ -75,6 +76,7 @@ private:
     std::unique_ptr<Arrangement> arrangement;
     std::unique_ptr<Transport> transport;
     std::unique_ptr<Project> project;
+    std::shared_ptr<ProjectProcessor> projectProcessor;
     FileManager* fileIO;
     std::unique_ptr<UIWindow> uiWindow;
     

@@ -360,4 +360,17 @@ void Project::createDemoClips() {
     std::cout << "Demo clips created on all tracks" << std::endl;
 }
 
+void Project::processAudio(AudioBuffer& outputBuffer, double currentTime, double sampleRate) {
+    int numSamples = outputBuffer.getNumSamples();
+    outputBuffer.clear();
+    
+    // Process each track
+    for (auto& track : tracks_) {
+        if (!track || track->isMuted()) continue;
+        
+        // Process track at current time
+        track->processAtTime(outputBuffer, numSamples, currentTime, sampleRate);
+    }
+}
+
 } // namespace OmegaDAW

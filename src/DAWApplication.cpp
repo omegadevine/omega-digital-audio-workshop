@@ -164,28 +164,8 @@ bool DAWApplication::run() {
 void DAWApplication::processAudio() {
     if (!transport->isPlaying()) return;
     
-    // Get current playback position in seconds
-    double position = transport->getPositionSeconds();
-    double bufferDuration = audioEngine->getBufferSize() / static_cast<double>(audioEngine->getSampleRate());
-    double startTime = position;
-    double endTime = position + bufferDuration;
-    
-    // Process MIDI sequencer
-    if (midiSequencer && midiSynth) {
-        MIDIBuffer midiBuffer;
-        midiSequencer->process(startTime, endTime, midiBuffer);
-        
-        // Send MIDI events to synthesizer
-        midiSynth->processMIDIBuffer(midiBuffer);
-    }
-    
-    // Process arrangement
-    auto audioBuffer = arrangement->renderAtPosition(position);
-    
-    // Route through mixer
-    mixer->process(audioBuffer);
-    
-    // Advance transport
+    // The ProjectProcessor (added to audio engine) will handle track playback automatically
+    // We just need to advance the transport
     transport->advance();
 }
 
@@ -238,8 +218,20 @@ bool DAWApplication::newProject(const std::string& projectName) {
     // Create demo clips for visualization
     project->createDemoClips();
     
+    // Create and add project processor to audio engine
+    if (projectProcessor) {
+        audioEngine->removeProcessor(projectProcessor);
+    }
+    projectProcessor = std::make_shared<ProjectProcessor>(
+        std::shared_ptr<Project>(project.get(), [](Project*){}), // Non-owning shared_ptr
+        std::shared_ptr<Transport>(transport.get(), [](Transport*){})
+    );
+    projectProcessor->prepare(audioEngine->getSampleRate(), audioEngine->getBufferSize());
+    audioEngine->addProcessor(projectProcessor);
+    
     std::cout << "New project created: " << projectName << std::endl;
     std::cout << "  - Created " << project->getNumTracks() << " tracks" << std::endl;
+    std::cout << "  - ProjectProcessor added to audio engine" << std::endl;
     return true;
 }
 
