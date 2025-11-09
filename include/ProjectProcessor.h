@@ -5,8 +5,6 @@
 #include "Project.h"
 #include "Transport.h"
 #include <memory>
-#include <iostream>
-#include <cmath>
 
 namespace OmegaDAW {
 
@@ -33,32 +31,12 @@ public:
         // Get current playback position
         double currentTime = transport_->getPositionSeconds();
         
-        // Debug output (first few calls only)
-        static int debugCount = 0;
-        if (debugCount < 5) {
-            std::cout << "ProjectProcessor::process called - time: " << currentTime 
-                      << ", frames: " << numFrames << std::endl;
-            debugCount++;
-        }
-        
         // Create audio buffer
         AudioBuffer buffer(numChannels, numFrames);
         buffer.clear();
         
         // Process project audio
         project_->processAudio(buffer, currentTime, sampleRate_);
-        
-        // Check if we got any audio
-        if (debugCount < 5) {
-            float maxSample = 0.0f;
-            for (int ch = 0; ch < numChannels; ++ch) {
-                for (int i = 0; i < numFrames; ++i) {
-                    float sample = std::abs(buffer.getSample(ch, i));
-                    if (sample > maxSample) maxSample = sample;
-                }
-            }
-            std::cout << "  Max sample amplitude: " << maxSample << std::endl;
-        }
         
         // Copy to output
         for (int ch = 0; ch < numChannels; ++ch) {
