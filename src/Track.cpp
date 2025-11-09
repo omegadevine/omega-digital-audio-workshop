@@ -14,7 +14,19 @@ Track::Track(const std::string& name, TrackType type)
     , muted_(false)
     , soloed_(false)
     , recordEnabled_(false)
-    , trackBuffer_(2, 512) {
+    , trackBuffer_(2, 512)
+    , synthesizer_(nullptr) {
+    
+    // Create a synthesizer for MIDI tracks
+    if (type_ == TrackType::MIDI) {
+        synthesizer_ = std::make_shared<MIDISynthesizer>(16);
+        synthesizer_->prepare(44100, 512);
+        synthesizer_->setWaveform(WaveformType::Sine);
+        synthesizer_->setAttack(0.01f);
+        synthesizer_->setDecay(0.1f);
+        synthesizer_->setSustain(0.7f);
+        synthesizer_->setRelease(0.2f);
+    }
 }
 
 void Track::process(AudioBuffer& buffer, int numSamples) {
@@ -146,8 +158,42 @@ void Track::processAtTime(AudioBuffer& buffer, int numSamples, double currentTim
                     trackBuffer_.setSample(ch, i, current + sample);
                 }
             }
+        } else if (clip->getType() == ClipType::MIDI && synthesizer_) {
+            // Process MIDI clip through synthesizer
+            auto midiClip = std::static_pointer_cast<MIDIClip>(clip);
+            const auto& notes = midiClip->getNotes();
+            
+            // Send MIDI messages to synthesizer that fall within this buffer
+            for (const auto& note : notes) {
+                double noteTimeInProject = clip->getStartTime() + note.getTimestamp() - clip->getOffset();
+                
+                // Check if note falls within current buffer time range
+                if (noteTimeInProject >= currentTime && noteTimeInProject < endTime) {
+                    synthesizer_->processMIDIMessage(note);
+                }
+            }
+            
+            // Generate audio from synthesizer
+            if (synthesizer_) {
+                // Prepare buffer for synthesizer output
+                float* outputs[2];
+                std::vector<float> leftChannel(numSamples);
+                std::vector<float> rightChannel(numSamples);
+                outputs[0] = leftChannel.data();
+                outputs[1] = rightChannel.data();
+                
+                // Process synthesizer
+                synthesizer_->process(nullptr, outputs, 2, numSamples);
+                
+                // Mix synthesizer output into track buffer
+                for (int i = 0; i < numSamples; ++i) {
+                    float currentL = trackBuffer_.getSample(0, i);
+                    float currentR = trackBuffer_.getSample(1, i);
+                    trackBuffer_.setSample(0, i, currentL + outputs[0][i]);
+                    trackBuffer_.setSample(1, i, currentR + outputs[1][i]);
+                }
+            }
         }
-        // MIDI clip processing would go here (trigger synthesizer)
     }
     
     // Apply volume and pan

@@ -2,6 +2,7 @@
 #include <nlohmann/json.hpp>
 #include <fstream>
 #include <iostream>
+#include <cmath>
 
 using json = nlohmann::json;
 
@@ -273,27 +274,72 @@ void Project::createDemoClips() {
     // Create demo clips for visualization
     for (auto& track : tracks_) {
         if (track->getType() == TrackType::Audio) {
-            // Add a few demo audio clips
+            // Add demo audio clips with synthesized audio
+            int sampleRate = 44100;
+            int trackIndex = track->getTrackIndex();
+            
+            // Clip 1: Sine wave
             auto clip1 = std::make_shared<AudioClip>(0.0, 2.0);
-            clip1->setName("Audio Clip 1");
+            clip1->setName("Sine Wave");
             clip1->setColor(0xFF4444FF);
+            
+            int numSamples = static_cast<int>(2.0 * sampleRate);
+            auto audioBuffer1 = std::make_shared<AudioBuffer>(2, numSamples);
+            float frequency1 = 440.0f + (trackIndex * 110.0f); // A4, B4, C#5
+            
+            for (int s = 0; s < numSamples; ++s) {
+                float t = s / static_cast<float>(sampleRate);
+                float sample = 0.3f * std::sin(2.0f * 3.14159265f * frequency1 * t);
+                audioBuffer1->setSample(0, s, sample);
+                audioBuffer1->setSample(1, s, sample);
+            }
+            clip1->setAudioData(audioBuffer1);
             track->addClip(clip1);
-            
+
+            // Clip 2: Square wave
             auto clip2 = std::make_shared<AudioClip>(3.0, 1.5);
-            clip2->setName("Audio Clip 2");
+            clip2->setName("Square Wave");
             clip2->setColor(0xFF44FF44);
-            track->addClip(clip2);
             
+            numSamples = static_cast<int>(1.5 * sampleRate);
+            auto audioBuffer2 = std::make_shared<AudioBuffer>(2, numSamples);
+            float frequency2 = 330.0f + (trackIndex * 82.5f); // E4, F#4, G#4
+            
+            for (int s = 0; s < numSamples; ++s) {
+                float t = s / static_cast<float>(sampleRate);
+                float phase = std::fmod(frequency2 * t, 1.0f);
+                float sample = 0.2f * (phase < 0.5f ? 1.0f : -1.0f);
+                audioBuffer2->setSample(0, s, sample);
+                audioBuffer2->setSample(1, s, sample);
+            }
+            clip2->setAudioData(audioBuffer2);
+            track->addClip(clip2);
+
+            // Clip 3: Sawtooth wave
             auto clip3 = std::make_shared<AudioClip>(5.5, 3.0);
-            clip3->setName("Audio Clip 3");
+            clip3->setName("Sawtooth");
             clip3->setColor(0xFFFF4444);
+            
+            numSamples = static_cast<int>(3.0 * sampleRate);
+            auto audioBuffer3 = std::make_shared<AudioBuffer>(2, numSamples);
+            float frequency3 = 220.0f + (trackIndex * 55.0f); // A3, B3, C#4
+            
+            for (int s = 0; s < numSamples; ++s) {
+                float t = s / static_cast<float>(sampleRate);
+                float phase = std::fmod(frequency3 * t, 1.0f);
+                float sample = 0.2f * (2.0f * phase - 1.0f);
+                audioBuffer3->setSample(0, s, sample);
+                audioBuffer3->setSample(1, s, sample);
+            }
+            clip3->setAudioData(audioBuffer3);
             track->addClip(clip3);
+            
         } else if (track->getType() == TrackType::MIDI) {
             // Add a demo MIDI clip
             auto midiClip = std::make_shared<MIDIClip>(0.0, 4.0);
             midiClip->setName("MIDI Pattern");
             midiClip->setColor(0xFFFFAA44);
-            
+
             // Add some demo notes (C major scale)
             std::vector<int> notes = {60, 62, 64, 65, 67, 69, 71, 72}; // C4 to C5
             for (size_t i = 0; i < notes.size(); ++i) {
@@ -301,16 +347,16 @@ void Project::createDemoClips() {
                 MIDIMessage noteOn(0x90, notes[i], 100); // Note on, velocity 100
                 noteOn.setTimestamp(time);
                 midiClip->addNote(noteOn);
-                
+
                 MIDIMessage noteOff(0x80, notes[i], 0); // Note off
                 noteOff.setTimestamp(time + 0.4); // Slightly shorter than spacing
                 midiClip->addNote(noteOff);
             }
-            
+
             track->addClip(midiClip);
         }
     }
-    
+
     std::cout << "Demo clips created on all tracks" << std::endl;
 }
 

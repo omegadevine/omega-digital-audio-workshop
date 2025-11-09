@@ -3,6 +3,7 @@
 
 #include "AudioBuffer.h"
 #include "Clip.h"
+#include "MIDISynthesizer.h"
 #include <string>
 #include <vector>
 #include <memory>
@@ -53,6 +54,10 @@ public:
     const std::vector<std::shared_ptr<Clip>>& getClips() const { return clips_; }
     std::vector<std::shared_ptr<Clip>> getClipsInRange(double startTime, double endTime) const;
     std::shared_ptr<Clip> getClipAt(double time) const;
+    
+    // MIDI synthesizer for MIDI tracks
+    std::shared_ptr<MIDISynthesizer> getSynthesizer() const { return synthesizer_; }
+    void setSynthesizer(std::shared_ptr<MIDISynthesizer> synth) { synthesizer_ = synth; }
 
 private:
     std::string name_;
@@ -67,6 +72,9 @@ private:
     
     AudioBuffer trackBuffer_;
     std::vector<std::shared_ptr<Clip>> clips_;
+    
+    // MIDI synthesizer for MIDI tracks
+    std::shared_ptr<MIDISynthesizer> synthesizer_;
 };
 
 } // namespace OmegaDAW
