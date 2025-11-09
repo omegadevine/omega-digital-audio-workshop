@@ -6,7 +6,8 @@ namespace OmegaDAW {
 DAWGUI::DAWGUI(DAWApplication* app)
     : daw(app), window(nullptr), renderer(nullptr), font(nullptr),
       quit(false), windowWidth(0), windowHeight(0),
-      mouseX(0), mouseY(0) {
+      mouseX(0), mouseY(0),
+      showingFileDialog(false), fileDialogMode(""), fileDialogPath("") {
 }
 
 DAWGUI::~DAWGUI() {
@@ -105,6 +106,9 @@ bool DAWGUI::initialize(int width, int height) {
         channelMeters.push_back(meter);
     }
     
+    // Setup menus
+    setupMenus();
+    
     std::cout << "GUI initialized successfully" << std::endl;
     return true;
 }
@@ -182,6 +186,11 @@ void DAWGUI::render() {
     renderTransportPanel();
     renderStatusBar();
     
+    // Render file dialog on top if showing
+    if (showingFileDialog) {
+        renderFileDialog();
+    }
+    
     // Present
     SDL_RenderPresent(renderer);
 }
@@ -189,7 +198,37 @@ void DAWGUI::render() {
 void DAWGUI::renderMenuBar() {
     SDL_Rect menuBar = {0, 0, windowWidth, 30};
     drawRect(menuBar, colors.panel);
-    drawText("File  Edit  View  Track  Insert  Help", 10, 8, colors.text);
+    
+    // Draw menus
+    for (auto& menu : menus) {
+        // Draw menu label
+        SDL_Color labelColor = menu.hovered ? colors.accent : colors.text;
+        drawText(menu.label, menu.rect.x + 5, menu.rect.y + 8, labelColor);
+        
+        // Draw dropdown if open
+        if (menu.open) {
+            // Dropdown background
+            int dropdownHeight = menu.items.size() * 25 + 10;
+            SDL_Rect dropdownRect = {menu.rect.x, menu.rect.y + menu.rect.h, 150, dropdownHeight};
+            drawRect(dropdownRect, colors.panel);
+            drawRect(dropdownRect, colors.border, false);
+            
+            // Draw menu items
+            for (size_t i = 0; i < menu.items.size(); ++i) {
+                auto& item = menu.items[i];
+                SDL_Color itemColor = item.enabled ? 
+                    (item.hovered ? colors.accent : colors.text) : 
+                    SDL_Color{100, 100, 100, 255};
+                
+                if (item.hovered && item.enabled) {
+                    SDL_Rect highlightRect = {dropdownRect.x + 2, dropdownRect.y + 5 + (int)i * 25, 146, 23};
+                    drawRect(highlightRect, colors.buttonHover);
+                }
+                
+                drawText(item.label, dropdownRect.x + 10, dropdownRect.y + 10 + i * 25, itemColor);
+            }
+        }
+    }
 }
 
 void DAWGUI::renderTransportPanel() {
@@ -393,6 +432,40 @@ void DAWGUI::drawLine(int x1, int y1, int x2, int y2, SDL_Color color) {
 }
 
 void DAWGUI::handleMouseDown(int x, int y) {
+    // Check menu bar clicks
+    if (y < 30) {
+        for (size_t i = 0; i < menus.size(); ++i) {
+            if (isPointInRect(x, y, menus[i].rect)) {
+                // Toggle menu
+                bool wasOpen = menus[i].open;
+                closeAllMenus();
+                menus[i].open = !wasOpen;
+                return;
+            }
+            
+            // Check if clicking on dropdown
+            if (menus[i].open) {
+                int dropdownHeight = menus[i].items.size() * 25 + 10;
+                SDL_Rect dropdownRect = {menus[i].rect.x, menus[i].rect.y + menus[i].rect.h, 150, dropdownHeight};
+                if (isPointInRect(x, y, dropdownRect)) {
+                    int itemIndex = (y - dropdownRect.y - 5) / 25;
+                    if (itemIndex >= 0 && itemIndex < (int)menus[i].items.size()) {
+                        if (menus[i].items[itemIndex].enabled) {
+                            handleMenuClick(i, itemIndex);
+                            closeAllMenus();
+                        }
+                    }
+                    return;
+                }
+            }
+        }
+        closeAllMenus();
+        return;
+    }
+    
+    // Close menus if clicking elsewhere
+    closeAllMenus();
+    
     // Check transport buttons
     if (isPointInRect(x, y, playButton.rect)) {
         playButton.pressed = true;
@@ -430,6 +503,27 @@ void DAWGUI::handleMouseUp(int x, int y) {
 }
 
 void DAWGUI::handleMouseMove(int x, int y) {
+    // Update menu hover states
+    for (auto& menu : menus) {
+        menu.hovered = isPointInRect(x, y, menu.rect);
+        
+        if (menu.open) {
+            int dropdownHeight = menu.items.size() * 25 + 10;
+            SDL_Rect dropdownRect = {menu.rect.x, menu.rect.y + menu.rect.h, 150, dropdownHeight};
+            
+            for (auto& item : menu.items) {
+                item.hovered = false;
+            }
+            
+            if (isPointInRect(x, y, dropdownRect)) {
+                int itemIndex = (y - dropdownRect.y - 5) / 25;
+                if (itemIndex >= 0 && itemIndex < (int)menu.items.size()) {
+                    menu.items[itemIndex].hovered = true;
+                }
+            }
+        }
+    }
+    
     // Update hover states
     playButton.hovered = isPointInRect(x, y, playButton.rect);
     stopButton.hovered = isPointInRect(x, y, stopButton.rect);
@@ -484,6 +578,201 @@ void DAWGUI::handleKeyDown(SDL_Keycode key) {
 bool DAWGUI::isPointInRect(int x, int y, const SDL_Rect& rect) {
     return x >= rect.x && x < rect.x + rect.w &&
            y >= rect.y && y < rect.y + rect.h;
+}
+
+void DAWGUI::setupMenus() {
+    // File menu
+    Menu fileMenu;
+    fileMenu.label = "File";
+    fileMenu.rect = {10, 0, 40, 30};
+    fileMenu.open = false;
+    
+    MenuItem newProject;
+    newProject.label = "New Project";
+    newProject.enabled = true;
+    fileMenu.items.push_back(newProject);
+    
+    MenuItem openProject;
+    openProject.label = "Open Project...";
+    openProject.enabled = true;
+    fileMenu.items.push_back(openProject);
+    
+    MenuItem saveProject;
+    saveProject.label = "Save";
+    saveProject.enabled = true;
+    fileMenu.items.push_back(saveProject);
+    
+    MenuItem saveAsProject;
+    saveAsProject.label = "Save As...";
+    saveAsProject.enabled = true;
+    fileMenu.items.push_back(saveAsProject);
+    
+    MenuItem separator;
+    separator.label = "---";
+    separator.enabled = false;
+    fileMenu.items.push_back(separator);
+    
+    MenuItem exitItem;
+    exitItem.label = "Exit";
+    exitItem.enabled = true;
+    fileMenu.items.push_back(exitItem);
+    
+    menus.push_back(fileMenu);
+    
+    // Edit menu (placeholder)
+    Menu editMenu;
+    editMenu.label = "Edit";
+    editMenu.rect = {60, 0, 40, 30};
+    editMenu.open = false;
+    menus.push_back(editMenu);
+    
+    // View menu (placeholder)
+    Menu viewMenu;
+    viewMenu.label = "View";
+    viewMenu.rect = {110, 0, 40, 30};
+    viewMenu.open = false;
+    menus.push_back(viewMenu);
+}
+
+void DAWGUI::handleMenuClick(int menuIndex, int itemIndex) {
+    if (menuIndex < 0 || menuIndex >= (int)menus.size()) return;
+    if (itemIndex < 0 || itemIndex >= (int)menus[menuIndex].items.size()) return;
+    
+    const std::string& menuLabel = menus[menuIndex].label;
+    const std::string& itemLabel = menus[menuIndex].items[itemIndex].label;
+    
+    if (menuLabel == "File") {
+        if (itemLabel == "New Project") {
+            if (daw) {
+                std::cout << "Creating new project..." << std::endl;
+                daw->newProject("Untitled Project");
+            }
+        } else if (itemLabel == "Open Project...") {
+            showFileDialog("open");
+        } else if (itemLabel == "Save") {
+            if (daw && daw->getProject()) {
+                std::string filepath = daw->getProject()->getFilePath();
+                if (filepath.empty()) {
+                    showFileDialog("saveas");
+                } else {
+                    std::cout << "Saving project to: " << filepath << std::endl;
+                    daw->saveProject(filepath);
+                }
+            }
+        } else if (itemLabel == "Save As...") {
+            showFileDialog("saveas");
+        } else if (itemLabel == "Exit") {
+            quit = true;
+        }
+    }
+}
+
+void DAWGUI::closeAllMenus() {
+    for (auto& menu : menus) {
+        menu.open = false;
+    }
+}
+
+void DAWGUI::showFileDialog(const std::string& mode) {
+    fileDialogMode = mode;
+    fileDialogPath = getWindowsFilePath(mode);
+    
+    if (!fileDialogPath.empty()) {
+        executeFileOperation();
+    }
+}
+
+void DAWGUI::executeFileOperation() {
+    if (!daw || fileDialogPath.empty()) return;
+    
+    if (fileDialogMode == "open") {
+        std::cout << "Loading project from: " << fileDialogPath << std::endl;
+        if (daw->loadProject(fileDialogPath)) {
+            std::cout << "Project loaded successfully!" << std::endl;
+        } else {
+            std::cerr << "Failed to load project" << std::endl;
+        }
+    } else if (fileDialogMode == "save" || fileDialogMode == "saveas") {
+        std::cout << "Saving project to: " << fileDialogPath << std::endl;
+        if (daw->saveProject(fileDialogPath)) {
+            std::cout << "Project saved successfully!" << std::endl;
+        } else {
+            std::cerr << "Failed to save project" << std::endl;
+        }
+    }
+    
+    fileDialogPath = "";
+    fileDialogMode = "";
+}
+
+std::string DAWGUI::getWindowsFilePath(const std::string& mode) {
+    // Use Windows command-line for file selection (simple implementation)
+    // In a full implementation, you would use Windows File Dialog API
+    
+    std::string filter = ".dawproj";
+    std::string defaultPath = "project.dawproj";
+    
+    if (mode == "open") {
+        std::cout << "\n=== Open Project ===" << std::endl;
+        std::cout << "Enter project file path (or press Enter to cancel): ";
+    } else if (mode == "save" || mode == "saveas") {
+        std::cout << "\n=== Save Project ===" << std::endl;
+        std::cout << "Enter project file path (or press Enter for default '" << defaultPath << "'): ";
+    }
+    
+    // For now, return a default path - in a real implementation,
+    // you'd use Windows API to show a proper file dialog
+    // This is a simplified version for demonstration
+    
+    if (mode == "save" || mode == "saveas") {
+        if (daw && daw->getProject()) {
+            std::string existingPath = daw->getProject()->getFilePath();
+            if (!existingPath.empty() && mode == "save") {
+                return existingPath;
+            }
+            
+            // Generate default filename based on project name
+            std::string projectName = daw->getProject()->getName();
+            std::string filename = projectName + ".dawproj";
+            
+            // Remove invalid characters
+            for (char& c : filename) {
+                if (c == ' ') c = '_';
+                if (c == '/' || c == '\\' || c == ':' || c == '*' || c == '?' || c == '"' || c == '<' || c == '>' || c == '|') {
+                    c = '_';
+                }
+            }
+            
+            return filename;
+        }
+        return defaultPath;
+    }
+    
+    return ""; // Cancel for open dialog (would need actual implementation)
+}
+
+void DAWGUI::renderFileDialog() {
+    // Render a semi-transparent overlay
+    SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_BLEND);
+    SDL_SetRenderDrawColor(renderer, 0, 0, 0, 180);
+    SDL_Rect overlay = {0, 0, windowWidth, windowHeight};
+    SDL_RenderFillRect(renderer, &overlay);
+    
+    // Render dialog box
+    SDL_Rect dialogBox = {windowWidth/2 - 200, windowHeight/2 - 100, 400, 200};
+    drawRect(dialogBox, colors.panel);
+    drawRect(dialogBox, colors.border, false);
+    
+    // Render dialog content
+    std::string title = "File Dialog";
+    if (fileDialogMode == "open") title = "Open Project";
+    else if (fileDialogMode == "save" || fileDialogMode == "saveas") title = "Save Project";
+    
+    drawText(title, dialogBox.x + 20, dialogBox.y + 20, colors.accent);
+    drawText("Path: " + fileDialogPath, dialogBox.x + 20, dialogBox.y + 60, colors.text);
+    drawText("(Check console for input)", dialogBox.x + 20, dialogBox.y + 100, colors.text);
+    
+    SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_NONE);
 }
 
 } // namespace OmegaDAW

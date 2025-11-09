@@ -45,6 +45,21 @@ struct Meter {
     float peak = 0.0f;
 };
 
+struct MenuItem {
+    std::string label;
+    SDL_Rect rect;
+    bool hovered = false;
+    bool enabled = true;
+};
+
+struct Menu {
+    std::string label;
+    SDL_Rect rect;
+    std::vector<MenuItem> items;
+    bool open = false;
+    bool hovered = false;
+};
+
 class DAWGUI {
 public:
     DAWGUI(DAWApplication* app);
@@ -64,6 +79,7 @@ private:
     void renderTimelinePanel();
     void renderMenuBar();
     void renderStatusBar();
+    void renderFileDialog();
     
     void drawButton(const Button& button);
     void drawFader(const Fader& fader);
@@ -78,6 +94,16 @@ private:
     void handleKeyDown(SDL_Keycode key);
     
     bool isPointInRect(int x, int y, const SDL_Rect& rect);
+    
+    // Menu handling
+    void setupMenus();
+    void handleMenuClick(int menuIndex, int itemIndex);
+    void closeAllMenus();
+    
+    // File operations
+    void showFileDialog(const std::string& mode);
+    void executeFileOperation();
+    std::string getWindowsFilePath(const std::string& mode);
     
     DAWApplication* daw;
     SDL_Window* window;
@@ -95,6 +121,14 @@ private:
     Button stopButton;
     Button recordButton;
     Button pauseButton;
+    
+    // Menus
+    std::vector<Menu> menus;
+    
+    // File dialog state
+    bool showingFileDialog;
+    std::string fileDialogMode; // "save", "saveas", "open"
+    std::string fileDialogPath;
     
     // State
     bool quit;
