@@ -1,0 +1,67 @@
+cmake_minimum_required(VERSION 3.15)
+project(OmegaDAW_MIDITest VERSION 0.1.0 LANGUAGES CXX)
+
+# Set C++ standard
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_EXTENSIONS OFF)
+
+# Find PortAudio
+find_package(portaudio CONFIG REQUIRED)
+
+# Add nlohmann/json header-only library
+add_subdirectory(external/json)
+
+# Output directories
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
+
+# Include directories
+include_directories(
+    ${CMAKE_SOURCE_DIR}/include
+)
+
+# MIDI playback test executable
+add_executable(OmegaDAW_MIDIPlaybackTest
+    src/main_midi_test.cpp
+    src/AudioEngine.cpp
+    src/AudioBuffer.cpp
+    src/AudioFilePlayer.cpp
+    src/FileIO.cpp
+    src/MIDIMessage.cpp
+    src/MIDIDevice.cpp
+    src/MIDIFile.cpp
+    src/MIDISequencer.cpp
+    src/MIDISynthesizer.cpp
+    src/Oscillator.cpp
+    src/Filter.cpp
+    src/Effects.cpp
+    src/AdvancedEffects.cpp
+    src/AudioProcessing.cpp
+    src/BuiltInPlugins.cpp
+    src/Plugin.cpp
+    src/PluginHost.cpp
+    src/Track.cpp
+    src/Clip.cpp
+    src/Arrangement.cpp
+    src/Sequencer.cpp
+    src/Mixer.cpp
+    src/MixerChannel.cpp
+    src/Router.cpp
+    src/Transport.cpp
+    src/Project.cpp
+    src/DAWApplication.cpp
+)
+
+target_link_libraries(OmegaDAW_MIDIPlaybackTest 
+    PRIVATE 
+    portaudio
+    nlohmann_json::nlohmann_json
+)
+
+# Platform-specific settings
+if(WIN32)
+    set_target_properties(OmegaDAW_MIDIPlaybackTest PROPERTIES WIN32_EXECUTABLE FALSE)
+    target_compile_definitions(OmegaDAW_MIDIPlaybackTest PRIVATE _CRT_SECURE_NO_WARNINGS)
+endif()
+
+message(STATUS "MIDI Playback Test build configuration complete")

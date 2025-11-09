@@ -13,6 +13,14 @@ find_package(SDL2_ttf CONFIG REQUIRED)
 # Find PortAudio
 find_package(portaudio CONFIG REQUIRED)
 
+# Set PortAudio include directory
+set(PORTAUDIO_INCLUDE_DIR "C:/SDL2/portaudio-install/include")
+set(PORTAUDIO_LIBRARY "C:/SDL2/portaudio-install/lib/libportaudio.a")
+set(SDL2_INCLUDE_DIR "C:/SDL2/SDL2-2.30.11/x86_64-w64-mingw32/include/SDL2")
+message(STATUS "PortAudio include directory: ${PORTAUDIO_INCLUDE_DIR}")
+message(STATUS "PortAudio library: ${PORTAUDIO_LIBRARY}")
+message(STATUS "SDL2 include directory: ${SDL2_INCLUDE_DIR}")
+
 # Add nlohmann/json header-only library
 add_subdirectory(external/json)
 
@@ -25,6 +33,8 @@ set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
 include_directories(
     ${CMAKE_SOURCE_DIR}/include
     ${CMAKE_SOURCE_DIR}/src
+    ${PORTAUDIO_INCLUDE_DIR}
+    ${SDL2_INCLUDE_DIR}
 )
 
 # Simple GUI executable (standalone, no DAW dependencies)
@@ -43,10 +53,12 @@ target_link_libraries(OmegaDAW_SimpleGUI
 set(DAW_SOURCES
     src/AudioEngine.cpp
     src/AudioBuffer.cpp
+    src/AudioFilePlayer.cpp
     src/MIDIMessage.cpp
     src/MIDIDevice.cpp
     src/MIDIFile.cpp
     src/MIDISequencer.cpp
+    src/MIDISynthesizer.cpp
     src/Oscillator.cpp
     src/Filter.cpp
     src/Effects.cpp
@@ -81,7 +93,7 @@ add_executable(OmegaDAW_GUI
 # Link libraries
 target_link_libraries(OmegaDAW_GUI 
     PRIVATE 
-    portaudio
+    ${PORTAUDIO_LIBRARY}
     nlohmann_json::nlohmann_json
     $<TARGET_NAME_IF_EXISTS:SDL2::SDL2main>
     $<IF:$<TARGET_EXISTS:SDL2::SDL2>,SDL2::SDL2,SDL2::SDL2-static>
@@ -100,10 +112,82 @@ target_link_libraries(OmegaDAW_Test
     $<IF:$<TARGET_EXISTS:SDL2::SDL2>,SDL2::SDL2,SDL2::SDL2-static>
 )
 
+# Audio playback test executable
+add_executable(OmegaDAW_AudioTest
+    src/main_audio_test.cpp
+    src/AudioEngine.cpp
+    src/AudioBuffer.cpp
+)
+
+target_link_libraries(OmegaDAW_AudioTest 
+    PRIVATE 
+    portaudio
+)
+
+# MIDI playback test executable
+add_executable(OmegaDAW_MIDITest
+    src/main_midi_test.cpp
+    ${DAW_SOURCES}
+)
+
+target_link_libraries(OmegaDAW_MIDITest 
+    PRIVATE 
+    portaudio
+    nlohmann_json::nlohmann_json
+    $<TARGET_NAME_IF_EXISTS:SDL2::SDL2main>
+    $<IF:$<TARGET_EXISTS:SDL2::SDL2>,SDL2::SDL2,SDL2::SDL2-static>
+    $<IF:$<TARGET_EXISTS:SDL2_ttf::SDL2_ttf>,SDL2_ttf::SDL2_ttf,SDL2_ttf::SDL2_ttf-static>
+)
+
+# Simple MIDI test (without GUI dependencies)
+add_executable(OmegaDAW_SimpleMIDITest
+    src/main_simple_midi_test.cpp
+    src/AudioEngine.cpp
+    src/AudioBuffer.cpp
+    src/MIDIMessage.cpp
+    src/MIDISynthesizer.cpp
+)
+
+target_link_libraries(OmegaDAW_SimpleMIDITest 
+    PRIVATE 
+    portaudio
+)
+
+# MIDI Synthesizer unit test (no audio output)
+add_executable(OmegaDAW_SynthUnitTest
+    src/main_synth_unittest.cpp
+    src/AudioBuffer.cpp
+    src/MIDIMessage.cpp
+    src/MIDISynthesizer.cpp
+)
+
+target_link_libraries(OmegaDAW_SynthUnitTest 
+    PRIVATE 
+    portaudio
+)
+
+# Audio file playback test
+add_executable(OmegaDAW_AudioPlaybackTest
+    src/main_audio_playback_test.cpp
+    src/AudioEngine.cpp
+    src/AudioBuffer.cpp
+    src/AudioFilePlayer.cpp
+    src/FileIO.cpp
+)
+
+target_link_libraries(OmegaDAW_AudioPlaybackTest 
+    PRIVATE 
+    portaudio
+)
+
 # Platform-specific settings
 if(WIN32)
     target_compile_definitions(OmegaDAW_GUI PRIVATE OMEGA_PLATFORM_WINDOWS)
     target_compile_definitions(OmegaDAW_Test PRIVATE OMEGA_PLATFORM_WINDOWS)
+    target_compile_definitions(OmegaDAW_AudioTest PRIVATE OMEGA_PLATFORM_WINDOWS)
+    target_compile_definitions(OmegaDAW_MIDITest PRIVATE OMEGA_PLATFORM_WINDOWS)
+    target_compile_definitions(OmegaDAW_SimpleMIDITest PRIVATE OMEGA_PLATFORM_WINDOWS)
+    target_compile_definitions(OmegaDAW_SynthUnitTest PRIVATE OMEGA_PLATFORM_WINDOWS)
     
     target_link_libraries(OmegaDAW_GUI 
         PRIVATE
@@ -111,9 +195,42 @@ if(WIN32)
         dsound
         ole32
         oleaut32
+        setupapi
     )
     
     target_link_libraries(OmegaDAW_Test 
+        PRIVATE
+        winmm
+        dsound
+        ole32
+        oleaut32
+    )
+    
+    target_link_libraries(OmegaDAW_AudioTest 
+        PRIVATE
+        winmm
+        dsound
+        ole32
+        oleaut32
+    )
+    
+    target_link_libraries(OmegaDAW_MIDITest 
+        PRIVATE
+        winmm
+        dsound
+        ole32
+        oleaut32
+    )
+    
+    target_link_libraries(OmegaDAW_SimpleMIDITest 
+        PRIVATE
+        winmm
+        dsound
+        ole32
+        oleaut32
+    )
+    
+    target_link_libraries(OmegaDAW_SynthUnitTest 
         PRIVATE
         winmm
         dsound

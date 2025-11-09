@@ -719,8 +719,8 @@ void AudioEngine::setProcessorBypassed(size_t index, bool bypassed) {
     auto processor = getProcessor(index);
     if (processor) {
         processor->setBypassed(bypassed);
-        std::cout << "Processor " << index << " " 
-                  << (bypassed ? "bypassed" : "enabled") << std::endl;
+        std::cout << "Processor " << index << " (" << processor->getName() 
+                  << ") " << (bypassed ? "bypassed" : "enabled") << std::endl;
     }
 }
 

@@ -7,7 +7,6 @@
 #include <functional>
 #include <mutex>
 #include <atomic>
-#include <string>
 
 // Include PortAudio for types
 #include <portaudio.h>

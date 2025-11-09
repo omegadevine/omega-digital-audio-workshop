@@ -1,0 +1,40 @@
+cmake_minimum_required(VERSION 3.15)
+project(OmegaDAW_AudioPlayback VERSION 0.1.0 LANGUAGES CXX)
+
+# Set C++ standard
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_EXTENSIONS OFF)
+
+# Find PortAudio
+find_package(portaudio CONFIG REQUIRED)
+
+# Output directories
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
+
+# Include directories
+include_directories(
+    ${CMAKE_SOURCE_DIR}/include
+)
+
+# Audio file playback test
+add_executable(OmegaDAW_AudioPlaybackTest
+    src/main_audio_playback_test.cpp
+    src/AudioEngine.cpp
+    src/AudioBuffer.cpp
+    src/AudioFilePlayer.cpp
+    src/FileIO.cpp
+)
+
+target_link_libraries(OmegaDAW_AudioPlaybackTest 
+    PRIVATE 
+    portaudio
+)
+
+# Platform-specific settings
+if(WIN32)
+    set_target_properties(OmegaDAW_AudioPlaybackTest PROPERTIES WIN32_EXECUTABLE FALSE)
+    target_compile_definitions(OmegaDAW_AudioPlaybackTest PRIVATE _CRT_SECURE_NO_WARNINGS)
+endif()
+
+message(STATUS "Audio Playback Test build configuration complete")

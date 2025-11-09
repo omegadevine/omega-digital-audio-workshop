@@ -2,8 +2,8 @@
 #define DAW_GUI_H
 
 #include "DAWApplication.h"
-#include <SDL.h>
-#include <SDL_ttf.h>
+#include <SDL2/SDL.h>
+#include <SDL2/SDL_ttf.h>
 #include <string>
 #include <vector>
 #include <memory>

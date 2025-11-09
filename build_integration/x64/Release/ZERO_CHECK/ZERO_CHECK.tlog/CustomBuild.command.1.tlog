@@ -1,0 +1,10 @@
+^C:\USERS\ALECC\OMEGA-DIGITAL-AUDIO-WORKSHOP\BUILD_INTEGRATION\CMAKEFILES\2F8B567F3848B46ADCACC1D2D8A65ED9\GENERATE.STAMP.RULE
+setlocal
+"C:\Program Files\CMake\bin\cmake.exe" -SC:/Users/alecc/omega-digital-audio-workshop/build_integration -BC:/Users/alecc/omega-digital-audio-workshop/build_integration --check-stamp-list CMakeFiles/generate.stamp.list --vs-solution-file C:/Users/alecc/omega-digital-audio-workshop/build_integration/OmegaDAW_IntegrationTest.sln
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal & call :cmErrorLevel %errorlevel% & goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd

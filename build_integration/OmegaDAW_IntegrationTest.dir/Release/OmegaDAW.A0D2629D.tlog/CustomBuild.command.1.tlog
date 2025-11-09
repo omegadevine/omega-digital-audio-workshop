@@ -1,0 +1,10 @@
+^C:\USERS\ALECC\OMEGA-DIGITAL-AUDIO-WORKSHOP\BUILD_INTEGRATION\CMAKELISTS.TXT
+setlocal
+"C:\Program Files\CMake\bin\cmake.exe" -SC:/Users/alecc/omega-digital-audio-workshop/build_integration -BC:/Users/alecc/omega-digital-audio-workshop/build_integration --check-stamp-file C:/Users/alecc/omega-digital-audio-workshop/build_integration/CMakeFiles/generate.stamp
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal & call :cmErrorLevel %errorlevel% & goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd

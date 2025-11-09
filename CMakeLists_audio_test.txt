@@ -1,0 +1,68 @@
+cmake_minimum_required(VERSION 3.15)
+project(OmegaDAW_AudioTest)
+
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+
+# Find required packages
+find_package(SDL2 REQUIRED)
+
+# PortAudio
+set(PORTAUDIO_INCLUDE_DIR "${CMAKE_SOURCE_DIR}/external/portaudio/include")
+set(PORTAUDIO_LIBRARY "${CMAKE_SOURCE_DIR}/external/portaudio/lib/portaudio_x64.lib")
+
+# RtMidi (optional for MIDI testing)
+set(RTMIDI_INCLUDE_DIR "${CMAKE_SOURCE_DIR}/external/rtmidi")
+
+# Include directories
+include_directories(
+    ${CMAKE_SOURCE_DIR}/include
+    ${PORTAUDIO_INCLUDE_DIR}
+    ${RTMIDI_INCLUDE_DIR}
+    ${SDL2_INCLUDE_DIRS}
+)
+
+# Source files for audio test
+set(AUDIO_TEST_SOURCES
+    src/main_audio_test.cpp
+    src/AudioEngine.cpp
+    src/AudioBuffer.cpp
+)
+
+# Audio Test Executable
+add_executable(omega_daw_audio_test ${AUDIO_TEST_SOURCES})
+
+# Link libraries
+target_link_libraries(omega_daw_audio_test
+    ${PORTAUDIO_LIBRARY}
+    ${SDL2_LIBRARIES}
+)
+
+# Windows-specific settings
+if(WIN32)
+    target_link_libraries(omega_daw_audio_test
+        winmm
+        ole32
+        uuid
+    )
+    
+    # Copy DLLs to output directory
+    add_custom_command(TARGET omega_daw_audio_test POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different
+        "${CMAKE_SOURCE_DIR}/external/portaudio/bin/portaudio_x64.dll"
+        $<TARGET_FILE_DIR:omega_daw_audio_test>
+    )
+    
+    if(SDL2_DLL)
+        add_custom_command(TARGET omega_daw_audio_test POST_BUILD
+            COMMAND ${CMAKE_COMMAND} -E copy_if_different
+            "${SDL2_DLL}"
+            $<TARGET_FILE_DIR:omega_daw_audio_test>
+        )
+    endif()
+endif()
+
+# Set output directory
+set_target_properties(omega_daw_audio_test PROPERTIES
+    RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin"
+)
