@@ -1,0 +1,56 @@
+# Git attributes for Omega DAW
+# Ensures consistent handling of files across platforms
+
+# Auto-detect text files
+* text=auto
+
+# Source code
+*.cpp text diff=cpp
+*.h text diff=cpp
+*.c text diff=c
+*.hpp text diff=cpp
+*.cc text diff=cpp
+*.cxx text diff=cpp
+
+# Scripts
+*.ps1 text eol=crlf
+*.sh text eol=lf
+*.bat text eol=crlf
+*.cmd text eol=crlf
+
+# CMake files
+CMakeLists.txt text
+*.cmake text
+
+# Documentation
+*.md text
+*.txt text
+LICENSE text
+README* text
+
+# Binary files - prevent corruption
+*.dll binary
+*.exe binary
+*.lib binary
+*.a binary
+*.so binary
+*.dylib binary
+
+# Audio files
+*.wav binary
+*.mp3 binary
+*.ogg binary
+*.flac binary
+
+# Archives
+*.zip binary
+*.tar binary
+*.gz binary
+*.7z binary
+
+# Git hooks should have LF line endings
+.git/hooks/* text eol=lf
+
+# Prevent merge conflicts in generated files
+*.vcxproj merge=binary
+*.sln merge=binary

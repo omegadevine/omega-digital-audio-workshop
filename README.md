@@ -75,40 +75,99 @@ A professional Digital Audio Workstation (DAW) built from the ground up with rea
 ## Building from Source
 
 ### Prerequisites
+- **MSYS2** (includes MinGW-w64 compiler)
 - CMake 3.15 or higher
-- C++17 compatible compiler (MSVC 2019+, GCC 9+, or Clang 10+)
 - Git
-- PortAudio library (see installation below)
 
-### Installing PortAudio on Windows
+### Quick Start (Windows)
 
-#### Option 1: vcpkg (Recommended)
-```bash
-git clone https://github.com/Microsoft/vcpkg.git
-cd vcpkg
-.\bootstrap-vcpkg.bat
-.\vcpkg integrate install
-.\vcpkg install portaudio
-```
+#### 1. Install MSYS2
+Download and install from: https://www.msys2.org/
 
-#### Option 2: Manual Installation
-Download prebuilt binaries from http://www.portaudio.com/download.html
-
-### Build Instructions
+#### 2. Clone the Repository
 ```bash
 git clone https://github.com/omegadevine/omega-digital-audio-workshop.git
 cd omega-digital-audio-workshop
-mkdir build
-cd build
-cmake ..
-cmake --build . --config Release
 ```
 
-### Running the Demo
-```bash
-cd build/bin
-./OmegaDAW  # or OmegaDAW.exe on Windows
+#### 3. Setup Dependencies (One-Time)
+```powershell
+.\scripts\setup_dependencies.ps1
 ```
+
+This script will:
+- Locate your MinGW compiler
+- Check for required libraries (SDL2, SDL2_ttf, PortAudio)
+- Install any missing dependencies via MSYS2
+- Create a CMake toolchain file
+- Mark dependencies as installed (won't reinstall next time)
+
+#### 4. Build the Project
+```powershell
+.\scripts\build.ps1
+```
+
+Options:
+- `-Clean`: Clean build directory before building
+- `-Release`: Build in Release mode (default is Debug)
+- `-SkipDeps`: Skip dependency check (not recommended)
+
+Examples:
+```powershell
+# Normal build (incremental)
+.\scripts\build.ps1
+
+# Clean build
+.\scripts\build.ps1 -Clean
+
+# Release build
+.\scripts\build.ps1 -Release
+
+# Complete rebuild with fresh dependencies
+.\scripts\setup_dependencies.ps1 -Force -Clean
+.\scripts\build.ps1 -Clean
+```
+
+### Running the Application
+```bash
+.\build\bin\OmegaDAW.exe
+```
+
+### Dependency Management
+
+The project uses a persistent dependency system to avoid redundant installations:
+
+- Dependencies are installed **once** in your MSYS2 MinGW directory
+- A version marker file (`.deps_installed_1.0.0`) tracks installation
+- Builds reuse existing dependencies automatically
+- No need to reinstall unless you use `-Force` flag
+
+**Why This Matters:**
+- Faster builds (no repeated downloads/installs)
+- No version conflicts between builds
+- No "missing DLL" errors from inconsistent library versions
+- Works reliably across multiple build attempts
+
+See [DEPENDENCY_MANAGEMENT.md](DEPENDENCY_MANAGEMENT.md) for detailed information.
+
+### Troubleshooting
+
+#### "Procedure entry point" Errors
+This usually means mixing different compiler/library versions. Solution:
+```powershell
+.\scripts\setup_dependencies.ps1 -Force -Clean
+.\scripts\build.ps1 -Clean
+```
+
+#### Dependencies Keep Getting "Reinstalled"
+Check if `.deps_installed_*` file exists in project root. Don't delete this file.
+
+#### Build Errors About Missing Libraries
+```powershell
+.\scripts\setup_dependencies.ps1 -Force
+```
+
+For more help, see [DEPENDENCY_MANAGEMENT.md](DEPENDENCY_MANAGEMENT.md).
 
 ## Audio Engine Demo
 
