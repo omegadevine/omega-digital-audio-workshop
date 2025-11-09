@@ -179,12 +179,14 @@ void DAWGUI::render() {
                           colors.background.b, colors.background.a);
     SDL_RenderClear(renderer);
     
-    // Render panels
-    renderMenuBar();
+    // Render panels (bottom layer)
     renderTimelinePanel();
     renderMixerPanel();
     renderTransportPanel();
     renderStatusBar();
+    
+    // Render menu bar and dropdowns (top layer)
+    renderMenuBar();
     
     // Render file dialog on top if showing
     if (showingFileDialog) {
@@ -432,14 +434,21 @@ void DAWGUI::drawLine(int x1, int y1, int x2, int y2, SDL_Color color) {
 }
 
 void DAWGUI::handleMouseDown(int x, int y) {
+    std::cout << "Mouse clicked at: (" << x << ", " << y << ")" << std::endl;
+    
     // Check menu bar clicks
     if (y < 30) {
+        std::cout << "Click in menu bar area." << std::endl;
         for (size_t i = 0; i < menus.size(); ++i) {
+            std::cout << "  Checking menu " << i << " (" << menus[i].label << "): rect=("  
+                      << menus[i].rect.x << "," << menus[i].rect.y << ","
+                      << menus[i].rect.w << "," << menus[i].rect.h << ") open=" << menus[i].open << std::endl;
             if (isPointInRect(x, y, menus[i].rect)) {
                 // Toggle menu
                 bool wasOpen = menus[i].open;
                 closeAllMenus();
                 menus[i].open = !wasOpen;
+                std::cout << "Menu '" << menus[i].label << "' clicked. WasOpen: " << wasOpen << ", Now open: " << menus[i].open << std::endl;
                 return;
             }
             
@@ -584,7 +593,7 @@ void DAWGUI::setupMenus() {
     // File menu
     Menu fileMenu;
     fileMenu.label = "File";
-    fileMenu.rect = {10, 0, 40, 30};
+    fileMenu.rect = {5, 0, 50, 30};  // Made wider and starts at x=5
     fileMenu.open = false;
     
     MenuItem newProject;
@@ -622,16 +631,24 @@ void DAWGUI::setupMenus() {
     // Edit menu (placeholder)
     Menu editMenu;
     editMenu.label = "Edit";
-    editMenu.rect = {60, 0, 40, 30};
+    editMenu.rect = {60, 0, 50, 30};  // Made wider
     editMenu.open = false;
     menus.push_back(editMenu);
     
     // View menu (placeholder)
     Menu viewMenu;
     viewMenu.label = "View";
-    viewMenu.rect = {110, 0, 40, 30};
+    viewMenu.rect = {115, 0, 50, 30};  // Made wider
     viewMenu.open = false;
     menus.push_back(viewMenu);
+    
+    std::cout << "Menus initialized. Total menus: " << menus.size() << std::endl;
+    std::cout << "File menu items: " << fileMenu.items.size() << std::endl;
+    
+    // Verify initial state
+    for (size_t i = 0; i < menus.size(); ++i) {
+        std::cout << "  Menu " << i << " (" << menus[i].label << "): open=" << menus[i].open << std::endl;
+    }
 }
 
 void DAWGUI::handleMenuClick(int menuIndex, int itemIndex) {
