@@ -197,6 +197,10 @@ private:
     std::vector<std::vector<float>> internalBuffers_;
     std::vector<std::vector<float>> inputBuffers_;
     
+    // Pre-allocated pointer arrays to avoid 'new' in audio callback
+    std::vector<float*> outputPointers_;
+    std::vector<float*> inputPointers_;
+    
     // Recording
     std::atomic<bool> isRecording_;
     std::shared_ptr<RecordingBuffer> recordingBuffer_;

@@ -18,8 +18,8 @@ public:
     }
     
     void process(float** inputs, float** outputs, int numChannels, int numFrames) override {
-        if (isBypassed() || !project_ || !transport_ || !transport_->isPlaying()) {
-            // Clear outputs if bypassed or not playing
+        if (isBypassed() || !project_ || !transport_) {
+            // Clear outputs if bypassed
             for (int ch = 0; ch < numChannels; ++ch) {
                 for (int i = 0; i < numFrames; ++i) {
                     outputs[ch][i] = 0.0f;
@@ -28,14 +28,24 @@ public:
             return;
         }
         
-        // Get current playback position
+        if (!transport_->isPlaying()) {
+            // Clear outputs if not playing
+            for (int ch = 0; ch < numChannels; ++ch) {
+                for (int i = 0; i < numFrames; ++i) {
+                    outputs[ch][i] = 0.0f;
+                }
+            }
+            return;
+        }
+        
+        // Get current playback position BEFORE advancing
         double currentTime = transport_->getPositionSeconds();
         
         // Create audio buffer
         AudioBuffer buffer(numChannels, numFrames);
         buffer.clear();
         
-        // Process project audio
+        // Process project audio at current position
         project_->processAudio(buffer, currentTime, sampleRate_);
         
         // Copy to output
@@ -44,6 +54,10 @@ public:
                 outputs[ch][i] = buffer.getSample(ch, i);
             }
         }
+        
+        // Advance transport by the number of frames processed
+        // This keeps transport in perfect sync with audio output
+        transport_->advance(numFrames);
     }
     
     std::string getName() const override { return "Project Processor"; }

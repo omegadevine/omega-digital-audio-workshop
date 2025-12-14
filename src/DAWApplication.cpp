@@ -14,7 +14,7 @@ DAWApplication::~DAWApplication() {
 }
 
 bool DAWApplication::initialize() {
-    return initialize(44100, 512);
+    return initialize(44100, 128);  // Reduced from 512 to 128 for lower latency
 }
 
 bool DAWApplication::initialize(int sampleRate, int bufferSize) {
@@ -38,7 +38,7 @@ bool DAWApplication::initialize(int sampleRate, int bufferSize) {
         // UIWindow needs title and dimensions
         uiWindow = std::make_unique<UIWindow>("Omega DAW", 1280, 720);
         
-        // Initialize components
+        // Initialize components (will use WASAPI for low latency on Windows)
         if (!audioEngine->initialize(sampleRate, bufferSize, 2)) {
             std::cerr << "Failed to initialize audio engine" << std::endl;
             return false;
@@ -162,11 +162,9 @@ bool DAWApplication::run() {
 }
 
 void DAWApplication::processAudio() {
-    if (!transport->isPlaying()) return;
-    
-    // The ProjectProcessor (added to audio engine) will handle track playback automatically
-    // We just need to advance the transport
-    transport->advance();
+    // The ProjectProcessor handles all audio processing and transport advancement
+    // in the audio callback for perfect timing synchronization
+    // Nothing to do here - audio processing happens in real-time audio thread
 }
 
 void DAWApplication::processEvents() {

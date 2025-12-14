@@ -238,9 +238,36 @@ bool AudioEngine::initialize(int sampleRate, int bufferSize, int numChannels) {
         buffer.resize(bufferSize_, 0.0f);
     }
     
+    // Pre-allocate pointer arrays to avoid 'new' in audio callback (CRITICAL for low latency!)
+    outputPointers_.resize(numChannels_);
+    for (int ch = 0; ch < numChannels_; ++ch) {
+        outputPointers_[ch] = internalBuffers_[ch].data();
+    }
+    
     // Setup PortAudio stream parameters
     PaStreamParameters outputParams;
-    outputParams.device = (selectedDeviceIndex_ >= 0) ? selectedDeviceIndex_ : Pa_GetDefaultOutputDevice();
+    
+    // Prefer WASAPI devices on Windows for lowest latency
+    PaDeviceIndex preferredDevice = -1;
+    if (selectedDeviceIndex_ >= 0) {
+        preferredDevice = selectedDeviceIndex_;
+    } else {
+        // Look for WASAPI host API (Windows low-latency audio)
+        int numHostApis = Pa_GetHostApiCount();
+        for (int i = 0; i < numHostApis; i++) {
+            const PaHostApiInfo* hostInfo = Pa_GetHostApiInfo(i);
+            if (hostInfo && hostInfo->type == paWASAPI) {
+                preferredDevice = hostInfo->defaultOutputDevice;
+                std::cout << "Using WASAPI for low latency: " << Pa_GetDeviceInfo(preferredDevice)->name << std::endl;
+                break;
+            }
+        }
+        if (preferredDevice < 0) {
+            preferredDevice = Pa_GetDefaultOutputDevice();
+        }
+    }
+    
+    outputParams.device = preferredDevice;
     
     if (outputParams.device == paNoDevice) {
         std::cerr << "No default output device found" << std::endl;
@@ -250,17 +277,23 @@ bool AudioEngine::initialize(int sampleRate, int bufferSize, int numChannels) {
     const PaDeviceInfo* deviceInfo = Pa_GetDeviceInfo(outputParams.device);
     outputParams.channelCount = std::min(numChannels_, deviceInfo->maxOutputChannels);
     outputParams.sampleFormat = paFloat32;
+    // Use low latency for real-time audio
     outputParams.suggestedLatency = deviceInfo->defaultLowOutputLatency;
     outputParams.hostApiSpecificStreamInfo = nullptr;
     
-    // Open stream
+    std::cout << "Device latency info:" << std::endl;
+    std::cout << "  Default Low: " << (deviceInfo->defaultLowOutputLatency * 1000.0) << " ms" << std::endl;
+    std::cout << "  Default High: " << (deviceInfo->defaultHighOutputLatency * 1000.0) << " ms" << std::endl;
+    std::cout << "  Requested: " << (outputParams.suggestedLatency * 1000.0) << " ms" << std::endl;
+    
+    // Open stream with low-latency flags
     PaError err = Pa_OpenStream(
         &stream_,
         nullptr,  // No input
         &outputParams,
         sampleRate_,
         bufferSize_,
-        paClipOff,  // We'll handle clipping
+        paClipOff | paPrimeOutputBuffersUsingStreamCallback,  // Low latency flags
         &AudioEngine::paCallback,
         this  // User data
     );
@@ -316,6 +349,12 @@ bool AudioEngine::initializeWithInput(int sampleRate, int bufferSize, int numOut
         inputBuffers_.resize(numInputChannels_);
         for (auto& buffer : inputBuffers_) {
             buffer.resize(bufferSize_, 0.0f);
+        }
+        
+        // Pre-allocate input pointer array
+        inputPointers_.resize(numInputChannels_);
+        for (int ch = 0; ch < numInputChannels_; ++ch) {
+            inputPointers_[ch] = inputBuffers_[ch].data();
         }
     }
     
@@ -595,10 +634,11 @@ void AudioEngine::processAudio(const float* inputBuffer, float* outputBuffer, in
         }
     }
     
-    // Deinterleave output buffer for processing
-    float** outputs = new float*[numChannels_];
+    // Use pre-allocated pointers (NO allocation in audio callback!)
+    float** outputs = outputPointers_.data();
+    
+    // Zero out output buffers
     for (int ch = 0; ch < numChannels_; ++ch) {
-        outputs[ch] = internalBuffers_[ch].data();
         std::memset(outputs[ch], 0, numFrames * sizeof(float));
     }
     
@@ -609,10 +649,7 @@ void AudioEngine::processAudio(const float* inputBuffer, float* outputBuffer, in
         // If monitoring is enabled, pass input to processors
         float** inputs = nullptr;
         if (monitoringEnabled_ && hasInput_ && inputBuffer) {
-            inputs = new float*[numInputChannels_];
-            for (int ch = 0; ch < numInputChannels_; ++ch) {
-                inputs[ch] = inputBuffers_[ch].data();
-            }
+            inputs = inputPointers_.data();  // Use pre-allocated pointers!
         }
         
         // Process through each non-bypassed processor
@@ -620,10 +657,6 @@ void AudioEngine::processAudio(const float* inputBuffer, float* outputBuffer, in
             if (!processor->isBypassed()) {
                 processor->process(inputs, outputs, numChannels_, numFrames);
             }
-        }
-        
-        if (inputs) {
-            delete[] inputs;
         }
     }
     
@@ -654,8 +687,6 @@ void AudioEngine::processAudio(const float* inputBuffer, float* outputBuffer, in
             outputBuffer[frame * numChannels_ + ch] = sample;
         }
     }
-    
-    delete[] outputs;
     
     // Update metering
     updateMetering(outputBuffer, numFrames);
